@@ -726,7 +726,7 @@
 
 	.calendar-list {
 		display: grid;
-		grid-template-columns: repeat(5, minmax(0, 1fr));
+		grid-template-columns: repeat(4, minmax(0, 1fr));
 		gap: 6px;
 	}
 
@@ -767,36 +767,13 @@
 	}
 
 	.calendar-logo {
-		width: 22px;
-		height: 22px;
-	}
-
-	[data-provider="google"] .calendar-tile {
-		color: #1a73e8;
-	}
-
-	[data-provider="outlook"] .calendar-tile {
-		color: #0a64ad;
-	}
-
-	[data-provider="yahoo"] .calendar-tile {
-		color: #6001d2;
+		width: 28px;
+		height: 28px;
+		object-fit: contain;
 	}
 
 	[data-provider="ics"] .calendar-tile {
 		color: var(--ink-muted);
-	}
-
-	:root[data-mode="dark"] [data-provider="google"] .calendar-tile {
-		color: #8ab4f8;
-	}
-
-	:root[data-mode="dark"] [data-provider="outlook"] .calendar-tile {
-		color: #4cc2ff;
-	}
-
-	:root[data-mode="dark"] [data-provider="yahoo"] .calendar-tile {
-		color: #b388ff;
 	}
 
 	.event-toast {

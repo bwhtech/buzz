@@ -16,13 +16,8 @@
 	{%- elif name == "close" %}<path d="M18 6 6 18"/><path d="m6 6 12 12"/>
 	{%- endif %}</svg>{% endautoescape %}{% endmacro %}
 
-{# Brand marks from Streamline's free Logos Solid set; Outlook uses the Microsoft mark. #}
-{% macro calendar_logo(name) %}{% autoescape true %}<svg class="calendar-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="
-	{%- if name == "google" %}M16.5 1H3a2 2 0 0 0 -2 2v13.5h5V6h10.5V1ZM18 1v5h5V3a2 2 0 0 0 -2 -2h-3Zm5 6.5h-5v9h5v-9ZM23 18h-5v5l5 -5Zm-6.5 5v-5h-9v5h9ZM6 23v-5H1v3a2 2 0 0 0 2 2h3Zm9.39 -14.92a0.75 0.75 0 0 1 0.415 0.67v6.5h-1.5v-5l-0.8 0.6 -0.9 -1.2 2 -1.5a0.75 0.75 0 0 1 0.786 -0.07Zm-6.75 2.06c0.116 -0.285 0.163 -0.393 0.25 -0.475 0.053 -0.05 0.2 -0.165 0.665 -0.165 0.356 0 0.505 0.131 0.591 0.25a0.93 0.93 0 0 1 0.16 0.5c0 0.088 -0.16 0.75 -1.25 0.75v1.5c1.09 0 1.25 0.662 1.25 0.75a0.93 0.93 0 0 1 -0.16 0.5c-0.086 0.119 -0.235 0.25 -0.59 0.25 -0.465 0 -0.613 -0.115 -0.665 -0.165 -0.088 -0.082 -0.135 -0.19 -0.252 -0.476l-1.389 0.567 0.022 0.055c0.089 0.221 0.25 0.623 0.587 0.943 0.403 0.382 0.96 0.576 1.696 0.576 0.845 0 1.445 -0.369 1.809 -0.874a2.425 2.425 0 0 0 0.441 -1.376c0 -0.467 -0.217 -1.046 -0.687 -1.5 0.47 -0.454 0.687 -1.033 0.687 -1.5 0 -0.37 -0.105 -0.908 -0.441 -1.376C11 8.37 10.399 8 9.555 8c-0.735 0 -1.293 0.194 -1.696 0.576 -0.338 0.32 -0.498 0.722 -0.587 0.943l-0.022 0.055 1.39 0.567Z
-	{%- elif name == "apple" %}M12 5.5c0 -3 1.5 -4.5 4.5 -4.5 0 3 -1.5 4.5 -4.5 4.5Zm-1.327 1.633c-0.642 -0.295 -1.378 -0.633 -2.337 -0.633 -2.129 0 -5.323 2.129 -5.323 6.387C3.013 17.145 5.713 23 8.336 23c0.798 0 1.33 -0.266 1.863 -0.532 0.532 -0.266 1.064 -0.532 1.863 -0.532 0.798 0 1.463 0.266 2.129 0.532 0.665 0.266 1.33 0.532 2.129 0.532 1.835 0 3.707 -2.864 4.666 -6.044 -0.882 -0.32 -2.646 -1.971 -2.646 -4.069 0 -2.706 1.237 -3.923 1.855 -4.33C19.08 7.186 17.528 6.5 16.32 6.5c-0.96 0 -1.864 0.338 -2.654 0.633 -0.613 0.228 -1.157 0.432 -1.604 0.432 -0.448 0 -0.89 -0.204 -1.389 -0.432Z
-	{%- elif name == "outlook" %}M1 1h10v10H1V1Zm12 0h10v10H13V1Zm-2 12H1v10h10V13Zm2 0h10v10H13V13Z
-	{%- elif name == "yahoo" %}M18.5 12H14l4.5 -10H23l-4.5 10Zm-1 3.5a2.5 2.5 0 1 1 -5 0 2.5 2.5 0 0 1 5 0ZM1 7h4.5L8 13l2.5 -6h4L8 22H4l2 -4L1 7Z
-	{%- endif %}"/></svg>{% endautoescape %}{% endmacro %}
+{# App icons from Wikimedia Commons (public domain). #}
+{% macro calendar_logo(name) %}{% autoescape true %}<img class="calendar-logo" src="/assets/buzz/images/calendars/{{ name }}.svg" alt="">{% endautoescape %}{% endmacro %}
 
 {% macro host_avatar(host) %}{% autoescape true %}{% if host.logo %}<img class="host-avatar" src="{{ host.logo }}" alt="">{% else %}<span class="host-avatar">{{ host.label[:1] | upper }}</span>{% endif %}{% endautoescape %}{% endmacro %}
 
@@ -101,7 +96,6 @@
 		<li><a class="calendar-option" data-provider="google" href="{{ calendar_links.google }}" target="_blank" rel="noopener noreferrer"><span class="calendar-tile">{{ calendar_logo("google") }}</span>Google</a></li>
 		<li><button type="button" class="calendar-option" data-provider="apple" data-action="ics"><span class="calendar-tile">{{ calendar_logo("apple") }}</span>Apple</button></li>
 		<li><a class="calendar-option" data-provider="outlook" href="{{ calendar_links.outlook }}" target="_blank" rel="noopener noreferrer"><span class="calendar-tile">{{ calendar_logo("outlook") }}</span>Outlook</a></li>
-		<li><a class="calendar-option" data-provider="yahoo" href="{{ calendar_links.yahoo }}" target="_blank" rel="noopener noreferrer"><span class="calendar-tile">{{ calendar_logo("yahoo") }}</span>Yahoo</a></li>
 		<li><button type="button" class="calendar-option" data-provider="ics" data-action="ics"><span class="calendar-tile">{{ icon("download") }}</span>{{ _(".ics file") }}</button></li>
 	</ul>
 </div>

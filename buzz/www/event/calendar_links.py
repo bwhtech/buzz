@@ -33,7 +33,6 @@ class CalendarLinks:
 		return {
 			"google": self.google(),
 			"outlook": self.outlook(),
-			"yahoo": self.yahoo(),
 			"ics": {
 				"title": self.event.title,
 				"start": self.start.strftime(STAMP),
@@ -64,14 +63,3 @@ class CalendarLinks:
 			"body": self.url,
 		}
 		return "https://outlook.live.com/calendar/0/action/compose?" + urlencode(query)
-
-	def yahoo(self) -> str:
-		query = {
-			"v": 60,
-			"title": self.event.title,
-			"st": self.start.strftime(STAMP),
-			"et": self.end.strftime(STAMP),
-			"in_loc": self.location,
-			"desc": self.url,
-		}
-		return "https://calendar.yahoo.com/?" + urlencode(query)
