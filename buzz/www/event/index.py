@@ -85,11 +85,11 @@ def not_found():
 
 class EventPage:
 	def __init__(self, route: str):
-		# get_doc skips the team permission hooks, which would hide every event from a Guest
+		# get_cached_doc skips the team permission hooks, which would hide every event from a Guest
 		name = frappe.db.get_value("Buzz Event", {"route": route, "is_published": 1})
 		if not name:
 			not_found()
-		self.event = frappe.get_doc("Buzz Event", name)
+		self.event = frappe.get_cached_doc("Buzz Event", str(name))
 
 	def as_context(self) -> dict:
 		context = {
@@ -204,6 +204,8 @@ class EventPage:
 	@cached_property
 	def speakers(self) -> list[dict]:
 		profiles = [row.speaker for row in self.event.featured_speakers]
+		if not profiles:
+			return []
 		rows = frappe.get_all(
 			"Speaker Profile",
 			filters={"name": ["in", profiles]},
@@ -216,15 +218,17 @@ class EventPage:
 	def sponsor_tiers(self) -> list[dict]:
 		sponsors = frappe.get_all(
 			"Event Sponsor",
-			filters={"event": self.event.name},
+			filters={"event": str(self.event.name)},
 			fields=["company_name", "company_logo", "website", "tier"],
 			order_by="creation",
 		)
+		if not sponsors:
+			return []
 		for sponsor in sponsors:
 			sponsor.website = web_url(sponsor.website)
 		tiers = frappe.get_all(
 			"Sponsorship Tier",
-			filters={"event": self.event.name},
+			filters={"event": str(self.event.name)},
 			fields=["name", "title", {"prices": ["price"]}],
 			order_by="creation asc",
 		)

@@ -201,3 +201,7 @@ class BuzzForm(Document):
 			return
 		if needs_update:
 			enqueue_generate_form(self.name)
+
+
+def on_doctype_update():
+	frappe.db.add_index("Buzz Form", ["event", "form_doctype"])

@@ -1,11 +1,26 @@
 import frappe
 from frappe.translate import get_all_translations
+from frappe.utils.caching import redis_cache
 
 from buzz.api.account.exceptions import UnknownLanguage, UnknownTimezone
 from buzz.api.account.schemas import GuestInfoResponse, LanguageOption, UserInfoResponse
 from buzz.api.account.services import accepted_timezones, get_request_language
 from buzz.api.onboarding.services import needs_onboarding
 from buzz.www.site_header import SiteHeader
+
+
+@redis_cache(ttl=86400)
+def _cached_enabled_languages() -> list[dict]:
+	return frappe.get_all(
+		"Language",
+		filters={"enabled": 1},
+		fields=["name", "language_name", "language_code"],
+		order_by="language_name",
+	)
+
+
+def clear_enabled_languages_cache(*args, **kwargs) -> None:
+	_cached_enabled_languages.clear_cache()
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
@@ -36,19 +51,13 @@ def get_user_info() -> UserInfoResponse | GuestInfoResponse:
 		navbar=header.navbar(),
 		language=user.language,
 		time_zone=user.time_zone,
-		needs_onboarding=needs_onboarding(user.name),
+		needs_onboarding=needs_onboarding(user.name, user_doc=user),
 	)
 
 
 @frappe.whitelist(allow_guest=True)  # nosemgrep: guest-whitelisted-method
 def get_enabled_languages() -> list[LanguageOption]:
-	languages = frappe.get_all(
-		"Language",
-		filters={"enabled": 1},
-		fields=["name", "language_name", "language_code"],
-		order_by="language_name",
-	)
-	return [LanguageOption(**language) for language in languages]
+	return [LanguageOption(**language) for language in _cached_enabled_languages()]
 
 
 # Deliberately not guest-whitelisted: every guest shares the one `Guest` User, so

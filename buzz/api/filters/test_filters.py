@@ -1,6 +1,7 @@
 import json
 
 import frappe
+from frappe.query_builder import Criterion
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
@@ -137,3 +138,53 @@ class TestAnswersSavedAsText(IntegrationTestCase):
 		field, operator, names = self.conditions(["booth", "in", ["1"]], answer_parents=answer_parents)[0]
 		self.assertEqual((field, operator), ("booking", "in"))
 		self.assertIn(self.ticked, names)
+
+	def test_qb_criteria_matches_python_string_answers(self):
+		table = frappe.qb.DocType("Sponsorship Enquiry")
+		for triple, expected in (
+			(["booth", "in", ["1"]], True),
+			(["interests", "like", ["Talk"]], True),
+			(["interests", "not like", ["Talk"]], False),
+		):
+			standard_filters, exists_criteria = ListConditions(
+				"Sponsorship Enquiry", self.fields
+			).split_qb_criteria(json.dumps([triple]), table)
+			query = frappe.qb.get_query(
+				"Sponsorship Enquiry",
+				fields=["name"],
+				filters=[["name", "=", self.ticked], *standard_filters],
+				ignore_permissions=True,
+			)
+			if exists_criteria:
+				query = query.where(Criterion.all(exists_criteria))
+			matched = set(query.run(pluck=True))
+			self.assertEqual(self.ticked in matched, expected)
+
+
+class TestListConditionsQB(TestListConditions):
+	"""Every filter rule produces the same matches via correlated EXISTS criteria."""
+
+	def matching(self, *triples) -> set[str]:
+		fields = [filter_field("status", "Status", "Select", [("Paid", "Paid")]), *question_fields(QUESTIONS)]
+		table = frappe.qb.DocType("Sponsorship Enquiry")
+		standard_filters, exists_criteria = ListConditions("Sponsorship Enquiry", fields).split_qb_criteria(
+			json.dumps(triples), table
+		)
+		query = frappe.qb.get_query(
+			"Sponsorship Enquiry",
+			fields=["name"],
+			filters=[["event", "=", self.event], *standard_filters],
+			ignore_permissions=True,
+		)
+		if exists_criteria:
+			query = query.where(Criterion.all(exists_criteria))
+		return set(query.run(pluck=True))
+
+	def test_standard_not_in(self):
+		self.assertEqual(self.matching(["status", "not in", ["Paid"]]), {self.yes})
+
+	def test_numeric_filter_ignores_non_numeric_answers(self):
+		bad = self.enquiry("Paid", attendees="abc")
+		self.addCleanup(frappe.delete_doc, "Sponsorship Enquiry", bad, force=True, ignore_permissions=True)
+		self.assertNotIn(bad, self.matching(["attendees", "<", "1"]))
+		self.assertNotIn(bad, self.matching(["attendees", ">", "-1"]))

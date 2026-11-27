@@ -2,6 +2,7 @@ import frappe
 from frappe.query_builder.functions import Count, Date, Sum
 from frappe.utils import flt
 
+from buzz.api.booking.services import OFFLINE_PAYMENT_METHOD
 from buzz.api.events.ticket_types import paid_bookings, revenue_by_currency
 from buzz.api.transactions.schemas import (
 	CurrencySummary,
@@ -13,19 +14,18 @@ from buzz.api.transactions.schemas import (
 from buzz.api.transactions.services import (
 	VERIFICATION_PENDING,
 	ensure_transactions_access,
-	latest_payments,
-	payment_method_of,
 )
 
 
 def transaction_summary(event: str) -> TransactionSummary:
 	ensure_transactions_access(event)
 	event = str(event)
+	currencies = currency_summaries(event)
 	return TransactionSummary(
-		currencies=currency_summaries(event),
+		currencies=currencies,
 		pending_verification=pending_verification(event),
-		by_payment_method=totals_by_payment_method(event),
-		daily=daily_revenue(event),
+		by_payment_method=totals_by_payment_method(event) if currencies else [],
+		daily=daily_revenue(event) if currencies else [],
 	)
 
 
@@ -77,26 +77,60 @@ def pending_verification(event: str) -> list[PendingVerification]:
 	return [PendingVerification(**row) for row in rows]
 
 
+PAYMENT_METHOD_TOTALS_SQL = """
+	SELECT
+		b.currency,
+		CASE
+			WHEN b.payment_method = %(offline)s
+				THEN COALESCE(NULLIF(b.offline_payment_method, ''), b.payment_method)
+			ELSE COALESCE(NULLIF(lp.payment_gateway, ''), b.payment_method)
+		END AS payment_method,
+		COUNT(b.name) AS bookings,
+		SUM(b.total_amount) AS amount
+	FROM `tabEvent Booking` b
+	LEFT JOIN (
+		SELECT reference_docname, payment_gateway
+		FROM (
+			SELECT
+				p.reference_docname,
+				p.payment_gateway,
+				ROW_NUMBER() OVER (
+					PARTITION BY p.reference_docname
+					ORDER BY p.creation DESC, p.name DESC
+				) AS rn
+			FROM `tabEvent Payment` p
+			INNER JOIN `tabEvent Booking` b2
+				ON b2.name = p.reference_docname
+			WHERE p.reference_doctype = 'Event Booking'
+				AND b2.event = %(event)s
+				AND b2.docstatus = 1
+				AND b2.payment_status = 'Paid'
+				AND b2.total_amount > 0
+		) ranked
+		WHERE ranked.rn = 1
+	) lp ON lp.reference_docname = b.name
+	WHERE b.event = %(event)s
+		AND b.docstatus = 1
+		AND b.payment_status = 'Paid'
+		AND b.total_amount > 0
+	GROUP BY b.currency, payment_method
+	ORDER BY COALESCE(b.currency, '') ASC, amount DESC
+"""
+
+
 def totals_by_payment_method(event: str) -> list[PaymentMethodTotal]:
-	"""Grouped here: the method is the gateway of each booking's latest payment, not a column."""
-	booking = frappe.qb.DocType("Event Booking")
-	bookings = (
-		paid_bookings(event).select(
-			booking.name,
-			booking.currency,
-			booking.total_amount,
-			booking.payment_method,
-			booking.offline_payment_method,
+	"""Aggregate paid bookings in SQL by currency and each booking's latest payment gateway."""
+	rows = frappe.db.sql(
+		PAYMENT_METHOD_TOTALS_SQL,
+		{"event": str(event), "offline": OFFLINE_PAYMENT_METHOD},
+		as_dict=True,
+	)
+	return [
+		PaymentMethodTotal(
+			currency=row.currency,
+			payment_method=row.payment_method,
+			bookings=row.bookings,
+			amount=flt(row.amount),
 		)
-	).run(as_dict=True)
-	payments = latest_payments([row.name for row in bookings])
-	totals: dict[tuple, PaymentMethodTotal] = {}
-	for row in bookings:
-		method = payment_method_of(row, payments.get(row.name))
-		total = totals.setdefault(
-			(row.currency, method),
-			PaymentMethodTotal(currency=row.currency, payment_method=method, bookings=0, amount=0),
-		)
-		total.bookings += 1
-		total.amount += flt(row.total_amount)
-	return sorted(totals.values(), key=lambda total: (total.currency or "", -total.amount))
+		for row in rows
+	]

@@ -42,7 +42,7 @@ class TicketService:
 		if not frappe.has_permission("Event Ticket", "read", ticket):
 			TicketNotAccessible.throw()
 
-		event_id = ticket.event
+		event_id = str(ticket.event)
 		event = frappe.get_cached_doc("Buzz Event", event_id)
 		zoom = self.zoom_registration()
 		return TicketDetailsResponse(
@@ -54,7 +54,7 @@ class TicketService:
 				event.venue and frappe.get_cached_value("Event Venue", event.venue, "has_multiple_locations")
 			),
 			booking=self.booking_owned_by_user(),
-			ticket_type=frappe.get_cached_doc("Event Ticket Type", ticket.ticket_type),
+			ticket_type=frappe.get_cached_doc("Event Ticket Type", str(ticket.ticket_type)),
 			can_transfer_ticket=windows.is_window_open(event_id, windows.TRANSFER),
 			can_change_add_ons=windows.is_window_open(event_id, windows.ADD_ON_CHANGE),
 			can_request_cancellation=windows.is_window_open(event_id, windows.CANCELLATION),
@@ -77,7 +77,9 @@ class TicketService:
 				"add_on.user_selects_option as user_selects_option",
 			],
 		)
-		options = self.selectable_options(event_id)
+		if not add_ons:
+			return []
+		options = self.selectable_options(event_id) if any(row.user_selects_option for row in add_ons) else {}
 		return [
 			TicketAddOnDetail(
 				id=add_on.name,
@@ -126,10 +128,11 @@ class TicketService:
 		)
 
 	def transfer(self, new_first_name: str, new_last_name: str, new_email: str) -> None:
-		if not frappe.db.exists("Event Ticket", self.ticket_id):
+		try:
+			ticket = frappe.get_doc("Event Ticket", self.ticket_id)
+		except frappe.DoesNotExistError:
+			frappe.clear_last_message()
 			TicketNotFound.throw()
-
-		ticket = frappe.get_doc("Event Ticket", self.ticket_id)
 		if not self.may_manage(ticket):
 			TransferNotPermitted.throw()
 
@@ -148,16 +151,20 @@ class TicketService:
 	def may_manage(self, ticket: "EventTicket") -> bool:
 		if ticket.attendee_email == frappe.session.user:
 			return True
-		if frappe.db.get_value("Event Booking", ticket.booking, "user") == frappe.session.user:
+		if (
+			ticket.booking
+			and frappe.get_cached_value("Event Booking", ticket.booking, "user") == frappe.session.user
+		):
 			return True
 		return bool(frappe.has_permission("Event Ticket", "write", ticket))
 
 
 def change_add_on_preference(add_on_id: str, new_value: str) -> None:
-	if not frappe.db.exists("Ticket Add-on Value", add_on_id):
+	try:
+		add_on_value = frappe.get_cached_doc("Ticket Add-on Value", add_on_id)
+	except frappe.DoesNotExistError:
+		frappe.clear_last_message()
 		AddOnValueNotFound.throw()
-
-	add_on_value = frappe.get_cached_doc("Ticket Add-on Value", add_on_id)
 	ticket = frappe.get_cached_doc("Event Ticket", add_on_value.parent)
 
 	if not TicketService(ticket.name).may_manage(ticket):
@@ -171,8 +178,8 @@ def change_add_on_preference(add_on_id: str, new_value: str) -> None:
 
 
 def validate_add_on_option(add_on_id: str, value: str) -> None:
-	user_selects_option, options = frappe.db.get_value(
-		"Ticket Add-on", add_on_id, ["user_selects_option", "options"]
+	user_selects_option, options = frappe.get_cached_value(
+		"Ticket Add-on", str(add_on_id), ["user_selects_option", "options"]
 	)
 	if user_selects_option and value not in add_on_options(options):
 		InvalidAddOnValue.throw(value=value)
@@ -196,8 +203,15 @@ def create_cancellation_request(booking_id: str, ticket_ids: list | None = None)
 	request.cancel_full_booking = not ticket_ids or len(ticket_ids) == booked_ticket_count
 
 	if not request.cancel_full_booking:
+		valid_tickets = set(
+			frappe.get_all(
+				"Event Ticket",
+				filters={"name": ["in", list(ticket_ids)], "booking": booking_id},
+				pluck="name",
+			)
+		)
 		for ticket_id in ticket_ids:
-			if frappe.db.get_value("Event Ticket", ticket_id, "booking") != booking_id:
+			if ticket_id not in valid_tickets:
 				TicketNotInBooking.throw(ticket_id=ticket_id, booking_id=booking_id)
 			request.append("tickets", {"ticket": ticket_id})
 

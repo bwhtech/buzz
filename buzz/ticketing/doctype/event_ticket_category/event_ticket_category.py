@@ -45,14 +45,19 @@ class EventTicketCategory(Document):
 
 
 # Display order: lowest sort_order first, ties by creation.
-def get_ordered_categories(event: str) -> list[dict]:
-	return frappe.get_all(
-		"Event Ticket Category",
-		filters={"event": event},
-		fields=["name", "title", "description", "sort_order"],
-		order_by="sort_order asc, creation asc",
-		ignore_permissions=True,
-	)
+def get_ordered_categories(event: str | int) -> list[dict]:
+	category = frappe.qb.DocType("Event Ticket Category")
+	return (
+		frappe.qb.from_(category)
+		.select(category.name, category.title, category.description, category.sort_order)
+		.where(category.event == str(event))
+		.orderby(category.sort_order)
+		.orderby(category.creation)
+	).run(as_dict=True)
+
+
+def on_doctype_update():
+	frappe.db.add_index("Event Ticket Category", ["event", "sort_order"])
 
 
 # Creates an event's categories from template rows. Maps each title to the new category's name.

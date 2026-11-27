@@ -46,7 +46,7 @@ def get_team_settings(team: str) -> "BuzzTeamSettings":
 
 
 def get_event_team_settings(event: str | int) -> "BuzzTeamSettings":
-	return get_team_settings(frappe.get_cached_value("Buzz Event", event, "team"))
+	return get_team_settings(frappe.get_cached_value("Buzz Event", str(event), "team"))
 
 
 # A feature flag is any Check field with this prefix, kept at permlevel 1 so only System Manager sets it.
@@ -55,13 +55,34 @@ FEATURE_FLAG_PREFIX = "feature_"
 IMPORT_FLAG = "feature_data_import"
 
 
+def feature_flag_fields() -> list[str]:
+	meta = frappe.get_meta("Buzz Team Settings")
+	return [
+		field.fieldname
+		for field in meta.fields
+		if field.fieldtype == "Check" and field.fieldname.startswith(FEATURE_FLAG_PREFIX)
+	]
+
+
 def feature_flags(team: str) -> dict[str, bool]:
 	settings = get_team_settings(team)
-	return {
-		field.fieldname: bool(settings.get(field.fieldname))
-		for field in settings.meta.fields
-		if field.fieldtype == "Check" and field.fieldname.startswith(FEATURE_FLAG_PREFIX)
-	}
+	return {fieldname: bool(settings.get(fieldname)) for fieldname in feature_flag_fields()}
+
+
+def feature_flags_by_team(teams: list[str]) -> dict[str, dict[str, bool]]:
+	if not teams:
+		return {}
+	flag_fields = feature_flag_fields()
+	rows = frappe.get_all(
+		"Buzz Team Settings",
+		filters={"name": ["in", teams]},
+		fields=["name", *flag_fields],
+	)
+	by_team = {row.name: {fieldname: bool(row.get(fieldname)) for fieldname in flag_fields} for row in rows}
+	for team in teams:
+		if team not in by_team:
+			frappe.throw(_("Buzz Team Settings {0} not found").format(team), frappe.DoesNotExistError)
+	return {team: by_team[team] for team in teams}
 
 
 def is_feature_enabled(team: str, flag: str) -> bool:

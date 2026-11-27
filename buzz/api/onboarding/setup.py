@@ -7,25 +7,29 @@ from buzz.api.onboarding.schemas import CommunityDraft
 from buzz.api.teams import public_page
 
 
-def owned_community(user: str) -> str | None:
+def _owned_community_row(user: str, fields: list[str]):
 	owned = frappe.get_all(
 		"Buzz Team Membership", filters={"user": user, "team_role": "Owner", "enabled": 1}, pluck="team"
 	)
 	if not owned:
 		return None
 	return frappe.db.get_value(
-		"Buzz Team", {"name": ("in", owned), "is_personal": 0}, order_by="creation desc"
+		"Buzz Team",
+		{"name": ("in", owned), "is_personal": 0},
+		fields,
+		as_dict=True,
+		order_by="creation desc",
 	)
+
+
+def owned_community(user: str) -> str | None:
+	row = _owned_community_row(user, ["name"])
+	return row.name if row else None
 
 
 def community_draft(user: str) -> CommunityDraft | None:
-	team = owned_community(user)
-	if not team:
-		return None
-	row = frappe.db.get_value(
-		"Buzz Team", team, ["name", "team_name", "slug", "logo", "short_description"], as_dict=True
-	)
-	return CommunityDraft(**row)
+	row = _owned_community_row(user, ["name", "team_name", "slug", "logo", "short_description"])
+	return CommunityDraft(**row) if row else None
 
 
 def save_community(

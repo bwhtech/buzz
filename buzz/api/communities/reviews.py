@@ -24,14 +24,12 @@ class CommunityReview:
 		return cls(doc.community), doc
 
 	def queue(self) -> CommunityQueue:
-		return CommunityQueue(
-			pending=sorted(
-				request_rows(community=self.community, status="Pending"),
-				key=lambda row: row.creation,
-				reverse=True,
-			),
-			approved=request_rows(community=self.community, status="Approved"),
+		rows = request_rows(community=self.community, status=("Pending", "Approved"))
+		pending = sorted(
+			(row for row in rows if row.status == "Pending"), key=lambda row: row.creation, reverse=True
 		)
+		approved = [row for row in rows if row.status == "Approved"]
+		return CommunityQueue(pending=pending, approved=approved)
 
 	def review(self, request, status: str, note: str | None = None) -> None:
 		if request.status != "Pending":

@@ -49,7 +49,7 @@ const teamRoute = computed(() =>
 			v-if="eventPage"
 			variant="ghost"
 			:size="buttonSize"
-			:link="eventPage"
+			:href="eventPage"
 			icon-right="lucide-arrow-up-right"
 			label="View event"
 		/>

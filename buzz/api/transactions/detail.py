@@ -1,4 +1,5 @@
 import frappe
+from frappe.query_builder import Order
 from frappe.utils import flt
 
 from buzz.api.booking.details import coupon_code_of
@@ -16,13 +17,12 @@ from buzz.api.transactions.schemas import (
 	TransactionUTM,
 )
 from buzz.api.transactions.services import (
+	VERIFICATION_PENDING,
 	ensure_transactions_access,
-	latest_payments,
 	payment_method_of,
-	transaction_names,
 )
 
-PAYMENT_FIELDS = [
+PAYMENT_FIELDS = (
 	"name",
 	"payment_gateway",
 	"payment_id",
@@ -30,7 +30,8 @@ PAYMENT_FIELDS = [
 	"amount",
 	"currency",
 	"payment_received",
-]
+	"creation",
+)
 
 
 def with_created_at(row: dict) -> dict:
@@ -43,17 +44,19 @@ def add_ons_by_parent(parenttype: str, parents: list[str]) -> dict[str, list[Tra
 	parents = [parent for parent in parents if parent]
 	if not parents:
 		return {}
-	rows = frappe.get_all(
-		"Ticket Add-on Value",
-		filters={"parenttype": parenttype, "parent": ("in", parents)},
-		fields=["parent", "add_on", "value", "price"],
-		order_by="idx asc",
-		ignore_permissions=True,
-	)
-	titles = titles_of("Ticket Add-on", {row.add_on for row in rows})
+	value = frappe.qb.DocType("Ticket Add-on Value")
+	addon = frappe.qb.DocType("Ticket Add-on")
+	rows = (
+		frappe.qb.from_(value)
+		.left_join(addon)
+		.on(addon.name == value.add_on)
+		.select(value.parent, value.add_on, addon.title.as_("add_on_title"), value.value, value.price)
+		.where((value.parenttype == parenttype) & value.parent.isin(parents))
+		.orderby(value.idx)
+	).run(as_dict=True)
 	by_parent: dict[str, list[TransactionAddOn]] = {}
 	for row in rows:
-		title = titles.get(row.add_on) or row.add_on
+		title = row.add_on_title or row.add_on
 		label = f"{title}: {row.value}" if row.value else title
 		by_parent.setdefault(row.parent, []).append(TransactionAddOn(title=label, price=flt(row.price)))
 	return by_parent
@@ -71,13 +74,29 @@ class TransactionDetailBuilder:
 
 	def __init__(self, event: str, booking: str):
 		ensure_transactions_access(event)
-		if not transaction_names(event, [["name", "=", booking]]):
+		try:
+			doc = frappe.get_doc("Event Booking", booking)
+		except frappe.DoesNotExistError:
+			frappe.clear_last_message()
 			TransactionNotFound.throw()
-		self.booking = frappe.get_doc("Event Booking", booking)
+		if (
+			str(doc.event) != str(event)
+			or flt(doc.total_amount) <= 0
+			or doc.docstatus == 2
+			or (doc.docstatus != 1 and doc.payment_status != VERIFICATION_PENDING)
+		):
+			TransactionNotFound.throw()
+		self.booking = doc
 
 	def detail(self) -> TransactionDetail:
 		booking = self.booking
-		payment = latest_payments([booking.name]).get(booking.name)
+		payment_rows = self._payment_rows()
+		latest_payment = payment_rows[0] if payment_rows else None
+		ticket_rows = self._ticket_rows()
+		ticket_type_ids = {row.ticket_type for row in booking.attendees} | {
+			row.ticket_type for row in ticket_rows
+		}
+		ticket_type_titles = titles_of("Event Ticket Type", ticket_type_ids)
 		return TransactionDetail(
 			name=booking.name,
 			created_at=booking.creation,
@@ -86,14 +105,14 @@ class TransactionDetailBuilder:
 			payment_status=booking.payment_status,
 			refund_status=booking.refund_status or None,
 			status=booking.status,
-			payment_method=payment_method_of(booking, payment),
+			payment_method=payment_method_of(booking, latest_payment),
 			offline_payment_method=booking.offline_payment_method,
 			buyer=self.buyer(),
 			amounts=self.amounts(),
-			line_items=self.line_items(),
-			payments=self.payments(),
+			line_items=self.line_items(ticket_type_titles),
+			payments=self.payments(payment_rows),
 			refunds=self.refunds(),
-			tickets=self.tickets(),
+			tickets=self.tickets(ticket_rows, ticket_type_titles),
 			utm=[TransactionUTM(utm_name=row.utm_name, value=row.value) for row in booking.utm_parameters],
 			answers=[row.as_dict(no_default_fields=True) for row in booking.additional_fields],
 		)
@@ -119,7 +138,9 @@ class TransactionDetailBuilder:
 			net_amount=flt(booking.net_amount),
 			discount_amount=flt(booking.discount_amount),
 			coupon_code=coupon_code_of(booking),
-			access_code=frappe.db.get_value("Buzz Coupon Code", access_code, "code") if access_code else None,
+			access_code=(
+				frappe.get_cached_value("Buzz Coupon Code", access_code, "code") if access_code else None
+			),
 			tax_label=booking.tax_label,
 			tax_percentage=flt(booking.tax_percentage),
 			tax_amount=flt(booking.tax_amount),
@@ -128,9 +149,10 @@ class TransactionDetailBuilder:
 			net_received=flt(booking.total_amount) - flt(booking.refunded_amount),
 		)
 
-	def line_items(self) -> list[TransactionLineItem]:
+	def line_items(self, titles: dict[str, str] | None = None) -> list[TransactionLineItem]:
 		attendees = self.booking.attendees
-		titles = titles_of("Event Ticket Type", {row.ticket_type for row in attendees})
+		if titles is None:
+			titles = titles_of("Event Ticket Type", {row.ticket_type for row in attendees})
 		add_ons = add_ons_by_parent("Attendee Ticket Add-on", [row.add_ons for row in attendees])
 		return [
 			TransactionLineItem(
@@ -145,42 +167,69 @@ class TransactionDetailBuilder:
 			for row in attendees
 		]
 
-	def payments(self) -> list[TransactionPayment]:
-		rows = frappe.get_all(
-			"Event Payment",
-			filters={"reference_doctype": "Event Booking", "reference_docname": self.booking.name},
-			fields=[*PAYMENT_FIELDS, "creation"],
-			order_by="creation desc",
-		)
+	def _payment_rows(self) -> list[frappe._dict]:
+		payment = frappe.qb.DocType("Event Payment")
+		return (
+			frappe.qb.from_(payment)
+			.select(*(payment[field] for field in PAYMENT_FIELDS))
+			.where(
+				(payment.reference_doctype == "Event Booking")
+				& (payment.reference_docname == self.booking.name)
+			)
+			.orderby(payment.creation, order=Order.desc)
+			.orderby(payment.name, order=Order.desc)
+		).run(as_dict=True)
+
+	def payments(self, rows: list[frappe._dict] | None = None) -> list[TransactionPayment]:
+		if rows is None:
+			rows = self._payment_rows()
 		return [
 			TransactionPayment(
-				**with_created_at(row)
+				**with_created_at(dict(row))
 				| {"name": str(row.name), "payment_received": bool(row.payment_received)}
 			)
 			for row in rows
 		]
 
 	def refunds(self) -> list[TransactionRefund]:
-		rows = frappe.get_all(
-			"Event Booking Refund",
-			filters={"booking": self.booking.name},
-			fields=["name", "refund_id", "amount", "status", "creation", "cancellation_request"],
-			order_by="creation desc",
-		)
+		refund = frappe.qb.DocType("Event Booking Refund")
+		rows = (
+			frappe.qb.from_(refund)
+			.select(
+				refund.name,
+				refund.refund_id,
+				refund.amount,
+				refund.status,
+				refund.creation,
+				refund.cancellation_request,
+			)
+			.where(refund.booking == self.booking.name)
+			.orderby(refund.creation, order=Order.desc)
+		).run(as_dict=True)
 		tickets = refunded_tickets([row.name for row in rows])
 		return [
 			TransactionRefund(**with_created_at(row) | {"tickets": tickets.get(row.name, [])}) for row in rows
 		]
 
-	def tickets(self) -> list[TransactionTicket]:
-		rows = frappe.get_all(
-			"Event Ticket",
-			filters={"booking": self.booking.name, "docstatus": 1},
-			fields=["name", "attendee_name", "attendee_email", "ticket_type"],
-			order_by="creation asc",
-		)
+	def _ticket_rows(self) -> list[frappe._dict]:
+		ticket = frappe.qb.DocType("Event Ticket")
+		return (
+			frappe.qb.from_(ticket)
+			.select(ticket.name, ticket.attendee_name, ticket.attendee_email, ticket.ticket_type)
+			.where((ticket.booking == self.booking.name) & (ticket.docstatus == 1))
+			.orderby(ticket.creation, order=Order.asc)
+		).run(as_dict=True)
+
+	def tickets(
+		self, rows: list[frappe._dict] | None = None, titles: dict[str, str] | None = None
+	) -> list[TransactionTicket]:
+		if rows is None:
+			rows = self._ticket_rows()
+		if not rows:
+			return []
 		names = [row.name for row in rows]
-		titles = titles_of("Event Ticket Type", {row.ticket_type for row in rows})
+		if titles is None:
+			titles = titles_of("Event Ticket Type", {row.ticket_type for row in rows})
 		add_ons = add_on_labels("Event Ticket", names)
 		checked_in = checked_in_tickets(names)
 		return [
@@ -199,12 +248,13 @@ class TransactionDetailBuilder:
 def refunded_tickets(refunds: list[str]) -> dict[str, list[str]]:
 	if not refunds:
 		return {}
-	rows = frappe.get_all(
-		"Event Booking Refund Ticket",
-		filters={"parenttype": "Event Booking Refund", "parent": ("in", refunds)},
-		fields=["parent", "ticket"],
-		order_by="idx asc",
-	)
+	row_table = frappe.qb.DocType("Event Booking Refund Ticket")
+	rows = (
+		frappe.qb.from_(row_table)
+		.select(row_table.parent, row_table.ticket)
+		.where((row_table.parenttype == "Event Booking Refund") & row_table.parent.isin(refunds))
+		.orderby(row_table.idx)
+	).run(as_dict=True)
 	by_refund: dict[str, list[str]] = {}
 	for row in rows:
 		by_refund.setdefault(row.parent, []).append(row.ticket)
@@ -214,6 +264,10 @@ def refunded_tickets(refunds: list[str]) -> dict[str, list[str]]:
 def checked_in_tickets(tickets: list[str]) -> set[str]:
 	if not tickets:
 		return set()
+	checkin = frappe.qb.DocType("Event Check In")
 	return set(
-		frappe.get_all("Event Check In", filters={"ticket": ("in", tickets), "docstatus": 1}, pluck="ticket")
+		frappe.qb.from_(checkin)
+		.select(checkin.ticket)
+		.where(checkin.ticket.isin(tickets) & (checkin.docstatus == 1))
+		.run(pluck=True)
 	)

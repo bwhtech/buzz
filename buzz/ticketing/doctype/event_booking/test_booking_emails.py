@@ -117,6 +117,30 @@ class TestBookingConfirmationEmail(BookingEmailTestCase):
 		booking.submit()
 		return booking
 
+	def test_enqueues_confirmation_email_after_commit_outside_tests(self, sendmail):
+		from buzz.ticketing.doctype.event_booking.event_booking import send_booking_confirmation_email_job
+
+		booking = self.create_booking(self.email_booker)
+		with patch("frappe.in_test", False), patch("frappe.enqueue") as enqueue:
+			booking.submit()
+
+		sendmail.assert_not_called()
+		enqueued_methods = [call.args[0] for call in enqueue.call_args_list]
+		self.assertIn(
+			"buzz.ticketing.doctype.event_booking.event_booking.send_booking_confirmation_email_job",
+			enqueued_methods,
+		)
+		booking_call = next(
+			call
+			for call in enqueue.call_args_list
+			if call.args[0].endswith("send_booking_confirmation_email_job")
+		)
+		self.assertTrue(booking_call.kwargs["enqueue_after_commit"])
+		self.assertEqual(booking_call.kwargs["booking_name"], booking.name)
+
+		send_booking_confirmation_email_job(booking.name)
+		sendmail.assert_called_once()
+
 
 @patch("frappe.sendmail")
 class TestOfflineAcknowledgementEmail(BookingEmailTestCase):

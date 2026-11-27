@@ -209,6 +209,21 @@ class TestInviteBatch(InviteTestCase):
 			],
 		)
 
+	def test_mixed_case_registered_ticket_email_is_skipped(self):
+		EventTicketFactory.create(
+			"submitted",
+			event=self.event.name,
+			ticket_type=self.paid_ticket_type.name,
+			attendee_email="Holder.Mixed@Example.COM",
+		)
+		rows = [{"email": "holder.mixed@example.com", "ticket_type": str(self.paid_ticket_type.name)}]
+
+		outcomes = send_invites(str(self.event.name), rows)
+
+		self.assertEqual(
+			[(row.email, row.status) for row in outcomes], [("holder.mixed@example.com", "registered")]
+		)
+
 	def test_the_message_is_capped(self):
 		rows = [{"email": "long-note@example.com", "ticket_type": str(self.paid_ticket_type.name)}]
 

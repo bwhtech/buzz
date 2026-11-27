@@ -11,7 +11,56 @@ from buzz.events.doctype.buzz_price.buzz_price import validate_unique_currencies
 from buzz.ticketing.doctype.ticket_hold.ticket_hold import held_quantities
 
 
+def sold_counts(
+	ticket_types: list, for_update: bool = False, event: str | int | None = None
+) -> dict[str, int]:
+	"""Submitted ticket count per ticket type, in one grouped query."""
+	if not ticket_types:
+		return {}
+	ticket = frappe.qb.DocType("Event Ticket")
+	condition = ticket.ticket_type.isin([str(name) for name in ticket_types]) & (ticket.docstatus == 1)
+	if event is not None:
+		condition = (ticket.event == str(event)) & condition
+	query = (
+		frappe.qb.from_(ticket)
+		.select(ticket.ticket_type, Count(ticket.name))
+		.where(condition)
+		.groupby(ticket.ticket_type)
+	)
+	if for_update:
+		query = query.for_update()
+	return {str(ticket_type): count for ticket_type, count in query.run()}
+
+
+def waitlist_ticket_types(event: str | int, ticket_types: list | None = None) -> set[str]:
+	"""Ticket types of `event` that currently have at least one open Waitlisted booking."""
+	booking = frappe.qb.DocType("Event Booking")
+	attendee = frappe.qb.DocType("Event Booking Attendee")
+	query = (
+		frappe.qb.from_(attendee)
+		.join(booking)
+		.on(booking.name == attendee.parent)
+		.select(attendee.ticket_type)
+		.distinct()
+		.where((booking.event == str(event)) & (booking.docstatus == 0) & (booking.status == "Waitlisted"))
+	)
+	if ticket_types is not None:
+		if not ticket_types:
+			return set()
+		query = query.where(attendee.ticket_type.isin([str(name) for name in ticket_types]))
+	return {str(name) for name in query.run(pluck=True)}
+
+
+def remaining_for(ticket_type, sold: dict[str, int], held: dict[str, int]) -> int:
+	if not ticket_type.max_tickets_available:
+		return -1
+	key = str(ticket_type.name)
+	return max(0, ticket_type.max_tickets_available - sold.get(key, 0) - held.get(key, 0))
+
+
 def tickets_sold_by_currency(ticket_types: list) -> dict[tuple[str, str], int]:
+	if not ticket_types:
+		return {}
 	booking = frappe.qb.DocType("Event Booking")
 	attendee = frappe.qb.DocType("Event Booking Attendee")
 	rows = (
@@ -19,7 +68,7 @@ def tickets_sold_by_currency(ticket_types: list) -> dict[tuple[str, str], int]:
 		.join(booking)
 		.on(booking.name == attendee.parent)
 		.select(attendee.ticket_type, attendee.currency, Count(attendee.name))
-		.where((booking.docstatus == 1) & attendee.ticket_type.isin(ticket_types or [""]))
+		.where((booking.docstatus == 1) & attendee.ticket_type.isin([str(name) for name in ticket_types]))
 		.groupby(attendee.ticket_type, attendee.currency)
 	).run()
 	return {(str(ticket_type), currency): count for ticket_type, currency, count in rows}
@@ -87,13 +136,16 @@ class EventTicketType(Document):
 	@property
 	def needs_approval(self) -> bool:
 		return bool(
-			self.requires_approval or frappe.get_cached_value("Buzz Event", self.event, "requires_approval")
+			self.requires_approval
+			or frappe.get_cached_value("Buzz Event", str(self.event), "requires_approval")
 		)
 
 	@property
 	def has_waitlist(self) -> bool:
 		# A ticket type without a limit never sells out.
-		enabled = self.enable_waitlist or frappe.get_cached_value("Buzz Event", self.event, "enable_waitlist")
+		enabled = self.enable_waitlist or frappe.get_cached_value(
+			"Buzz Event", str(self.event), "enable_waitlist"
+		)
 		return bool(self.max_tickets_available and enabled)
 
 	def joins_waitlist(self, quantity: int, hold_token: str | None = None, for_update: bool = False) -> bool:
@@ -112,7 +164,7 @@ class EventTicketType(Document):
 			.on(booking.name == attendee.parent)
 			.select(attendee.name)
 			.where(
-				(attendee.ticket_type == self.name)
+				(attendee.ticket_type == str(self.name))
 				& (booking.docstatus == 0)
 				& (booking.status == "Waitlisted")
 			)
@@ -182,11 +234,15 @@ class EventTicketType(Document):
 		query = (
 			frappe.qb.from_(ticket)
 			.select(Count(ticket.name))
-			.where((ticket.ticket_type == self.name) & (ticket.docstatus == 1))
+			.where((ticket.ticket_type == str(self.name)) & (ticket.docstatus == 1))
 		)
 		if for_update:
 			query = query.for_update()
 		return query.run()[0][0]
+
+
+def on_doctype_update():
+	frappe.db.add_index("Event Ticket Type", ["event", "is_published"])
 
 
 def start_capacity_transaction() -> None:
