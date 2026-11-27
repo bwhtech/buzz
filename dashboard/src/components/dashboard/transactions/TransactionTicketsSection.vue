@@ -2,6 +2,7 @@
 import { Button, Dropdown, Tooltip } from "frappe-ui"
 import { useRouter } from "vue-router"
 
+import CollapsibleCard from "@/components/common/CollapsibleCard.vue"
 import { useCopyToClipboard } from "@/composables/useCopyToClipboard"
 import type { TransactionDetail, TransactionTicket } from "@/types"
 
@@ -52,24 +53,12 @@ const actions = (ticket: TransactionTicket) => [
 </script>
 
 <template>
-	<section class="space-y-3">
-		<div class="flex items-center justify-between gap-2">
-			<h3 class="flex items-center gap-2 text-lg font-semibold text-ink-gray-9">
-				Tickets
-				<span class="text-base font-normal tabular-nums text-ink-gray-5">
-					{{ transaction.tickets.length }}
-				</span>
-			</h3>
-			<Button
-				v-if="canDownloadAll && transaction.tickets.length > 1"
-				variant="ghost"
-				size="sm"
-				icon-left="lucide-download"
-				label="Download all"
-				:href="allTicketsUrl()"
-			/>
-		</div>
-		<ul class="-mx-2">
+	<CollapsibleCard
+		icon="lucide-ticket"
+		title="Tickets"
+		:summary="`${transaction.tickets.length} ${transaction.tickets.length === 1 ? 'ticket' : 'tickets'}`"
+	>
+		<ul class="px-2 py-2">
 			<li
 				v-for="ticket in transaction.tickets"
 				:key="ticket.name"
@@ -115,7 +104,16 @@ const actions = (ticket: TransactionTicket) => [
 				</Dropdown>
 			</li>
 		</ul>
-	</section>
+		<div v-if="canDownloadAll && transaction.tickets.length > 1" class="px-2 pb-2">
+			<Button
+				variant="ghost"
+				size="sm"
+				icon-left="lucide-download"
+				label="Download all"
+				:href="allTicketsUrl()"
+			/>
+		</div>
+	</CollapsibleCard>
 </template>
 
 <style scoped>
