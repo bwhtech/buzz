@@ -9,6 +9,8 @@ LAYOUT_BREAK_FIELDTYPES = {"Column Break", "Section Break"}
 # Masters a public form asks for; `get_list` refuses them to anyone without a permission, and no
 # row on these is private. They are short, so they are offered whole.
 PUBLIC_LINK_DOCTYPES = frozenset({"Country", "Event Host", "Event Category", "Sponsorship Tier"})
+# Each row is one attendee's own record, so a picker on them would list other attendees.
+PER_ATTENDEE_DOCTYPES = frozenset({"Attendee Ticket Add-on"})
 # A picker is a shortlist, not a listing.
 LINK_OPTION_LIMIT = 100
 
@@ -97,6 +99,8 @@ def _cached_country_options() -> list[dict]:
 def get_link_field_options(doctype: str, event: str | None = None) -> list[dict]:
 	if doctype == "Country":
 		return _cached_country_options()
+	if doctype in PER_ATTENDEE_DOCTYPES:
+		return []
 	meta = frappe.get_meta(doctype)
 	can_read = frappe.has_permission(doctype, "read")
 	if not can_read and not is_open_reference(doctype, meta):

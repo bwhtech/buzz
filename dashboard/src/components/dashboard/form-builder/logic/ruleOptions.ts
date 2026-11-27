@@ -80,12 +80,9 @@ function valuesOf(
 	return null
 }
 
-// Links to other attendees' records, not to choices an attendee makes, so they can't be tested.
-const PER_ATTENDEE_LINKS = ["Attendee Ticket Add-on"]
-
+// A link with no choices to pick from can't be tested.
 const isTestable = (field: DoctypeField) =>
-	field.fieldtype !== "Link" ||
-	(Boolean(field.link_options?.length) && !PER_ATTENDEE_LINKS.includes(field.options ?? ""))
+	field.fieldtype !== "Link" || Boolean(field.link_options?.length)
 
 // What a condition may test: the doctype's own fields, then questions above the rule's targets.
 export function ruleFields(

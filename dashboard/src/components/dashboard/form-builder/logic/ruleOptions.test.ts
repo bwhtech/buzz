@@ -26,8 +26,3 @@ test("a link with no choices is left out", () => {
 	assert.deepEqual(fieldnames([link("host", "Event Host", null)]), [])
 	assert.deepEqual(fieldnames([link("host", "Event Host", [])]), [])
 })
-
-test("a link to other attendees' add-ons is left out even when it has rows", () => {
-	const addOns = link("add_ons", "Attendee Ticket Add-on", [{ value: "Booker", label: "Booker" }])
-	assert.deepEqual(fieldnames([addOns]), [])
-})
