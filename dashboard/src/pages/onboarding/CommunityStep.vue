@@ -64,7 +64,7 @@ defineExpose({
 				:check="checkCommunitySlug"
 			/>
 			<p class="text-sm text-ink-gray-5">
-				{{ __("Your public page, where people find your events. You can change it later.") }}
+				{{ __("Your public page, where people find your events.") }}
 			</p>
 		</div>
 		<Textarea
