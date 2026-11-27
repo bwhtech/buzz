@@ -79,7 +79,7 @@ const themeOptions = computed<
 			role="radio"
 			:aria-checked="colorScheme === option.value"
 			:data-testid="`theme-option-${option.value}`"
-			class="min-h-[42px] flex-1 overflow-hidden rounded-6 border text-left transition-colors duration-150 ease-out focus-visible:focus-ring"
+			class="min-h-[42px] flex-1 overflow-hidden rounded-6 border text-left transition-colors duration-150 ease-out"
 			:class="colorScheme === option.value ? 'border-outline-gray-4' : 'border-outline-gray-1'"
 			@click="setColorScheme(option.value)"
 		>

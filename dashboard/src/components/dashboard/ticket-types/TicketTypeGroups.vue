@@ -37,7 +37,7 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 					<h3>
 						<button
 							type="button"
-							class="flex max-w-full items-center gap-1.5 rounded-3 py-0.5 text-left focus-visible:focus-ring"
+							class="flex max-w-full items-center gap-1.5 rounded-3 py-0.5 text-left"
 							:aria-expanded="!collapsed.has(group.key)"
 							@click="toggle(group.key)"
 						>
@@ -113,7 +113,7 @@ const toggle = (key: string) => (collapsed.has(key) ? collapsed.delete(key) : co
 					<button
 						v-if="canWrite && !organizer.dragging.value"
 						type="button"
-						class="flex h-16 w-full items-center gap-2 rounded-4 border border-dashed border-outline-gray-3 px-3.5 text-base text-ink-gray-6 transition-[border-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] [@media(hover:hover)]:hover:border-outline-gray-4 [@media(hover:hover)]:hover:text-ink-gray-8 focus-visible:focus-ring active:scale-[0.99] motion-reduce:transform-none"
+						class="flex h-16 w-full items-center gap-2 rounded-4 border border-dashed border-outline-gray-3 px-3.5 text-base text-ink-gray-6 transition-[border-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] [@media(hover:hover)]:hover:border-outline-gray-4 [@media(hover:hover)]:hover:text-ink-gray-8 active:scale-[0.99] motion-reduce:transform-none"
 						@click="$emit('add', group.key)"
 					>
 						<Icon icon="lucide-plus" class="size-4" aria-hidden="true" />

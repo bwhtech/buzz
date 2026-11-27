@@ -33,7 +33,7 @@ const summary = computed(() => {
 <template>
 	<RouterLink
 		:to="{ name: 'event-guests', params: { eventId: event }, query: { filters } }"
-		class="flex w-full items-center gap-3 rounded-4 bg-surface-gray-1 p-4 transition-[background-color,transform] duration-150 ease-out [@media(hover:hover)]:hover:bg-surface-gray-2 active:scale-[0.99] focus-visible:focus-ring motion-reduce:transform-none"
+		class="flex w-full items-center gap-3 rounded-4 bg-surface-gray-1 p-4 transition-[background-color,transform] duration-150 ease-out [@media(hover:hover)]:hover:bg-surface-gray-2 active:scale-[0.99] motion-reduce:transform-none"
 	>
 		<span class="flex shrink-0 -space-x-1.5" aria-hidden="true">
 			<Avatar

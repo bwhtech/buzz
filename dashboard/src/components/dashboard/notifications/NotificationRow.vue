@@ -34,7 +34,7 @@ const summary = computed(() => {
 <template>
 	<button
 		type="button"
-		class="flex w-full items-start gap-3 rounded-[10px] px-3 py-2.5 text-left transition-[background-color,transform] duration-150 ease-out hover:bg-surface-gray-2 focus-visible:focus-ring active:scale-[0.99]"
+		class="flex w-full items-start gap-3 rounded-[10px] px-3 py-2.5 text-left transition-[background-color,transform] duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.99]"
 		@click="emit('open')"
 	>
 		<span class="relative size-8 shrink-0">

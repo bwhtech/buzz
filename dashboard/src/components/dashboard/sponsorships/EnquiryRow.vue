@@ -27,7 +27,7 @@ const submittedExact = computed(() =>
 	<li>
 		<button
 			type="button"
-			class="flex w-full items-center gap-4 rounded-4 border border-outline-gray-2 p-3 text-left transition-[background-color,transform] duration-150 ease-out hover:bg-surface-gray-1 active:scale-[0.99] focus-visible:focus-ring motion-reduce:transform-none"
+			class="flex w-full items-center gap-4 rounded-4 border border-outline-gray-2 p-3 text-left transition-[background-color,transform] duration-150 ease-out hover:bg-surface-gray-1 active:scale-[0.99] motion-reduce:transform-none"
 			@click="$emit('open')"
 		>
 			<Avatar

@@ -8,7 +8,7 @@ defineProps<{ links: NavbarLink[]; align: "start" | "end" }>()
 
 // Anchors, not Buttons: frappe-ui's Button opens every link in a new tab.
 const linkClass =
-	"inline-flex h-8 items-center rounded-4 px-2.5 text-base-medium text-ink-gray-8 transition-colors hover:bg-surface-gray-3 active:bg-surface-gray-4 focus-visible:focus-ring"
+	"inline-flex h-8 items-center rounded-4 px-2.5 text-base-medium text-ink-gray-8 transition-colors hover:bg-surface-gray-3 active:bg-surface-gray-4"
 </script>
 
 <template>
