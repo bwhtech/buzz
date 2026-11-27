@@ -71,6 +71,7 @@
 						class="flex min-w-0 flex-col gap-6"
 						:style="{ '--direction': direction }"
 					>
+						<slot v-if="step.id === 'tickets'" name="notice" />
 						<header class="flex flex-col gap-1.5">
 							<h1 class="text-xl-semibold tracking-[-0.01em] text-ink-gray-9 md:text-2xl-semibold">
 								{{ stepCopy.title }}

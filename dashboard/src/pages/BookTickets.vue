@@ -56,13 +56,6 @@
 			</div>
 		</div>
 		<div v-else>
-			<div v-if="openRequest" class="mx-auto max-w-6xl px-4 pt-5 md:px-6">
-				<RegistrationRequestNotice
-					:booking-id="openRequest.name"
-					:notice="openRequest.notice"
-					show-link
-				/>
-			</div>
 			<BookingForm
 				v-if="eventBookingData.availableAddOns && eventBookingData.availableTicketTypes"
 				:availableAddOns="eventBookingData.availableAddOns"
@@ -79,7 +72,16 @@
 				:isGuestMode="isGuest"
 				:offlineMethods="eventBookingData.offlineMethods"
 				:changeAccessCode="changeAccessCode"
-			/>
+			>
+				<template #notice>
+					<RegistrationRequestNotice
+						v-if="openRequest"
+						:booking-id="openRequest.name"
+						:notice="openRequest.notice"
+						show-link
+					/>
+				</template>
+			</BookingForm>
 		</div>
 	</div>
 </template>

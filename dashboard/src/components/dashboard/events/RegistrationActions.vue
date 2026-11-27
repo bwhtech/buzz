@@ -43,7 +43,7 @@ const guestSubtitle = computed(() => {
 	>
 		<QuickActionTile
 			icon="lucide-hat-glasses"
-			title="Registration without login"
+			title="Anonymous"
 			:subtitle="guestSubtitle"
 			:tone="allowGuestBooking ? 'violet' : 'gray'"
 			:disabled="!canWrite"
