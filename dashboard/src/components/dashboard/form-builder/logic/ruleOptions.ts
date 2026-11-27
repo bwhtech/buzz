@@ -80,7 +80,7 @@ function valuesOf(
 	return null
 }
 
-// What a condition may test: the doctype's own fields, then questions above the rule's targets.
+// What a condition may test: the doctype's own fields (a link with no choices to pick from is skipped), then questions above the rule's targets.
 export function ruleFields(
 	doctypeFields: DoctypeField[],
 	questions: FormQuestion[],
@@ -88,6 +88,7 @@ export function ruleFields(
 ): RuleField[] {
 	const standard = doctypeFields
 		.filter((field) => fieldType(field.fieldtype).group !== "Layout")
+		.filter((field) => field.fieldtype !== "Link" || field.link_options)
 		.map((field) => ({
 			fieldname: field.fieldname,
 			label: field.label,

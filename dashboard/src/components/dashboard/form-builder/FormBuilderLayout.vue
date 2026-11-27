@@ -32,7 +32,7 @@ const section = computed(() => {
 const isMobile = useIsMobile()
 
 const SECTIONS = [
-	{ label: "Build", value: "build", icon: "lucide-layout-list" },
+	{ label: "Questions", value: "build", icon: "lucide-layout-list" },
 	{ label: "Logic", value: "logic", icon: "lucide-workflow" },
 	{ label: "Settings", value: "settings", icon: "lucide-settings-2" },
 ]

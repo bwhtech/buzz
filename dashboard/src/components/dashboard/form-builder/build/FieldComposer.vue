@@ -10,24 +10,40 @@ const text = ref("")
 const active = ref(0)
 const input = ref<HTMLInputElement | null>(null)
 
-// "/" opens the menu; any other text becomes a short text question on Enter.
-const isSearching = computed(() => text.value.startsWith("/"))
+// Clicking the row or typing "/" opens the menu; any other text becomes a short text question on Enter.
+const isMenuOpen = ref(false)
+const isSlashQuery = computed(() => text.value.startsWith("/"))
+const isSearching = computed(() => isMenuOpen.value || isSlashQuery.value)
 const groups = computed(() =>
-	isSearching.value ? fieldMenu(props.formDoctype, text.value.slice(1)) : [],
+	isSearching.value
+		? fieldMenu(props.formDoctype, isSlashQuery.value ? text.value.slice(1) : "")
+		: [],
 )
 const items = computed(() => groups.value.flatMap((group) => group.items))
-watch(text, () => (active.value = 0))
+watch(text, (value) => {
+	active.value = 0
+	if (value && !isSlashQuery.value) isMenuOpen.value = false
+})
+
+function closeMenu() {
+	isMenuOpen.value = false
+	if (isSlashQuery.value) text.value = ""
+}
 
 function pick(item: MenuItem) {
 	emit("pick", item)
 	text.value = ""
+	isMenuOpen.value = false
 }
 
 function onKeydown(event: KeyboardEvent) {
-	if (isSearching.value && ["ArrowDown", "ArrowUp"].includes(event.key)) {
+	if (isSearching.value && items.value.length && ["ArrowDown", "ArrowUp"].includes(event.key)) {
 		event.preventDefault()
 		const step = event.key === "ArrowDown" ? 1 : -1
 		active.value = (active.value + step + items.value.length) % items.value.length
+	} else if (event.key === "Enter" && !text.value.trim() && isMenuOpen.value) {
+		event.preventDefault()
+		if (items.value[active.value]) pick(items.value[active.value])
 	} else if (event.key === "Enter" && text.value.trim()) {
 		event.preventDefault()
 		if (!isSearching.value)
@@ -43,11 +59,12 @@ function onKeydown(event: KeyboardEvent) {
 		emit("leaveUp")
 	} else if (event.key === "Escape") {
 		text.value = ""
+		isMenuOpen.value = false
 	}
 }
 
 function openMenu() {
-	text.value = "/"
+	isMenuOpen.value = true
 	input.value?.focus()
 }
 
@@ -56,15 +73,15 @@ defineExpose({ focus: () => input.value?.focus() })
 
 <template>
 	<div class="relative">
-		<!-- The whole row is the target: the plus opens the field types, anywhere else types a question. -->
+		<!-- One click anywhere on the row opens the field types; typing still adds a short text question. -->
 		<label
-			class="flex cursor-text items-center gap-2 rounded-5 px-3 py-1 text-ink-gray-4 focus-within:bg-surface-gray-1 [@media(hover:hover)]:hover:bg-surface-gray-1"
+			class="flex cursor-pointer items-center gap-2 rounded-5 px-3 py-1 text-ink-gray-4 focus-within:bg-surface-gray-1 [@media(hover:hover)]:hover:bg-surface-gray-1"
+			@click="openMenu"
 		>
 			<button
 				type="button"
 				class="-m-1 flex rounded p-1 hover:text-ink-gray-7"
 				aria-label="Choose a field type"
-				@mousedown.prevent="openMenu"
 			>
 				<span class="lucide-plus size-4" aria-hidden="true" />
 			</button>
@@ -72,12 +89,12 @@ defineExpose({ focus: () => input.value?.focus() })
 				ref="input"
 				v-model="text"
 				class="h-[34px] min-w-0 flex-1 border-0 bg-transparent p-0 text-[15px] text-ink-gray-8 outline-none placeholder:text-ink-gray-4 focus:ring-0"
-				placeholder="Type a question and press Enter, or / for field types"
+				placeholder="Add question: click to pick a type, or type and press Enter"
 				aria-label="Add a field"
 				role="combobox"
 				:aria-expanded="isSearching"
 				@keydown="onKeydown"
-				@blur="text.startsWith('/') && (text = '')"
+				@blur="closeMenu"
 			/>
 		</label>
 		<div
