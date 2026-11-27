@@ -87,7 +87,7 @@ async function save(close: () => void) {
 				guest_verification_method: method.value,
 			},
 		})
-		toast.success("Guest registration settings saved")
+		toast.success("Registration settings saved")
 		emit("changed")
 		close()
 	} catch (error) {
@@ -112,13 +112,13 @@ const actions = computed<DialogAction[]>(() => [
 </script>
 
 <template>
-	<Dialog v-model="isOpen" title="Guest registration" :actions="actions">
+	<Dialog v-model="isOpen" title="Registration without login" :actions="actions">
 		<div class="space-y-4">
 			<Switch
 				v-model="enabled"
 				padded
-				label="Accept guest registrations"
-				description="Guests can register themselves from the registration page."
+				label="Let people register without logging in"
+				description="When off, people must log in before they can register."
 			/>
 
 			<!-- Skeletons rather than enabled options: an option drawn before the site's
@@ -133,7 +133,7 @@ const actions = computed<DialogAction[]>(() => [
 					<Radio
 						value="None"
 						label="None"
-						description="Guests are registered as soon as they submit the form."
+						description="People are registered as soon as they submit the form."
 					/>
 					<Radio
 						value="Email OTP"
