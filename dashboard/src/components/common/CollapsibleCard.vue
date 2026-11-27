@@ -2,7 +2,7 @@
 import { CollapsibleContent, CollapsibleRoot, CollapsibleTrigger } from "reka-ui"
 
 // A bordered card that folds its content away under an icon, a title and a summary
-// line, e.g. "6 answers · Show".
+// line, e.g. "6 answers".
 withDefaults(
 	defineProps<{ icon: string; title: string; summary: string; defaultOpen?: boolean }>(),
 	{
@@ -29,9 +29,7 @@ withDefaults(
 			</span>
 			<span class="min-w-0 flex-1">
 				<span class="block text-base font-medium text-ink-gray-9">{{ title }}</span>
-				<span class="block text-sm text-ink-gray-5"
-					>{{ summary }} · {{ open ? "Hide" : "Show" }}</span
-				>
+				<span class="block text-sm text-ink-gray-5">{{ summary }}</span>
 			</span>
 			<span
 				class="flex size-7 shrink-0 items-center justify-center rounded-full border border-outline-gray-2 bg-surface-white text-ink-gray-7"
