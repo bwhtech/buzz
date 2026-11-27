@@ -27,7 +27,9 @@ defineProps<{
 			<slot name="description">{{ description }}</slot>
 		</p>
 		<div v-if="$slots.default || action" class="mt-2">
-			<slot><Button variant="solid" v-bind="action" /></slot>
+			<!-- A slot whose content is all v-if'd away renders this fallback, so it needs
+			     its own guard or it shows as an empty solid pill. -->
+			<slot><Button v-if="action" variant="solid" v-bind="action" /></slot>
 		</div>
 	</div>
 </template>

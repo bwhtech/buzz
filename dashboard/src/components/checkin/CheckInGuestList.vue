@@ -373,7 +373,9 @@ watch(validationResult, (result) => {
 				</ul>
 
 				<EmptyState v-else v-bind="emptyState">
-					<Button v-if="loadedSearch" label="Clear search" @click="search = ''" />
+					<template v-if="loadedSearch" #default>
+						<Button label="Clear search" @click="search = ''" />
+					</template>
 				</EmptyState>
 			</div>
 
