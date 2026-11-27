@@ -61,7 +61,7 @@ const freeEventAlert = computed(() => {
 	if (step.value !== 1 || !description) return null
 	const nothingAllowed = !availability.value.firstAllowedType
 	return {
-		theme: nothingAllowed ? ("amber" as const) : ("gray" as const),
+		theme: nothingAllowed ? ("amber" as const) : ("blue" as const),
 		title: nothingAllowed ? "Nothing to create yet" : "This event is free",
 		description,
 		primaryAction: {
