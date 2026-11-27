@@ -56,6 +56,13 @@
 			</div>
 		</div>
 		<div v-else>
+			<div v-if="openRequest" class="mx-auto max-w-6xl px-4 pt-5 md:px-6">
+				<RegistrationRequestNotice
+					:booking-id="openRequest.name"
+					:notice="openRequest.notice"
+					show-link
+				/>
+			</div>
 			<BookingForm
 				v-if="eventBookingData.availableAddOns && eventBookingData.availableTicketTypes"
 				:availableAddOns="eventBookingData.availableAddOns"
@@ -84,6 +91,7 @@ import { computed, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import type { CoreField } from "@/components/registration/coreFields"
+import RegistrationRequestNotice from "@/components/RegistrationRequestNotice.vue"
 import { holdTokenKey } from "@/composables/useTicketHold"
 import { session } from "@/data/session"
 import type {
@@ -94,6 +102,7 @@ import type {
 	OfflineMethod,
 } from "@/types"
 import type { LogicRule } from "@/utils/formLogic"
+import { requestNotice } from "@/utils/registrationRequest"
 
 import BookingForm from "../components/BookingForm.vue"
 
@@ -138,6 +147,13 @@ const props = defineProps({
 const accessCode = ref(String(useRoute().query.code ?? ""))
 
 const isGuest = computed(() => !session.isLoggedIn)
+
+// Asking again is refused while this is open, so the guest sees it before filling the form.
+const openRequest = computed(() => {
+	const request = eventBookingResource.data?.open_request
+	const notice = requestNotice(request?.status)
+	return request && notice ? { name: request.name as string, notice } : null
+})
 
 usePageMeta(() => {
 	const eventTitle = eventBookingData.eventDetails?.title

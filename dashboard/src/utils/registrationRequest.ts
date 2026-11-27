@@ -54,3 +54,12 @@ export function requestSubmitLabel(pickedTicketTypes: RequestFlags[]): string | 
 	if (pickedTicketTypes.some((ticketType) => ticketType.waitlisted)) return "Join waitlist"
 	return isRegistrationRequest(pickedTicketTypes) ? "Request to join" : null
 }
+
+/** A request covers the whole order, including tickets that need no approval on their own. */
+export function requestNote(pickedTicketTypes: RequestFlags[]): string | null {
+	if (pickedTicketTypes.some((ticketType) => ticketType.waitlisted))
+		return "The whole order joins the waitlist. We'll email you if spots open."
+	return isRegistrationRequest(pickedTicketTypes)
+		? "The organizer reviews the whole order before any ticket is issued."
+		: null
+}
