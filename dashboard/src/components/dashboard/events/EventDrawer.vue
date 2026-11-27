@@ -161,7 +161,7 @@ const endsAt = computed(() => {
 				</div>
 
 				<!-- Actions a caller adds for this event, pinned under the scrolling details. -->
-				<div v-if="$slots.footer" class="flex gap-2 border-t border-outline-gray-2 p-4">
+				<div v-if="$slots.footer" class="flex shrink-0 gap-2 p-4">
 					<slot name="footer" />
 				</div>
 			</template>

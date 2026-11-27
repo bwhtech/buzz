@@ -143,7 +143,7 @@ const note = computed(() => {
 					<RequestActivity :key="request.name" :request="request" />
 				</div>
 
-				<div v-if="buttons.length" class="shrink-0 space-y-2.5 border-t border-outline-gray-1 p-4">
+				<div v-if="buttons.length" class="shrink-0 space-y-2.5 p-4">
 					<p v-if="note" class="flex items-center gap-1.5 text-sm text-ink-gray-5">
 						<span
 							:class="paid ? 'lucide-credit-card' : 'lucide-mail'"

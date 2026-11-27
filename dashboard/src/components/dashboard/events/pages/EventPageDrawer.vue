@@ -89,19 +89,17 @@ async function save() {
 <template>
 	<Drawer v-model:open="open" swipe-direction="right">
 		<DrawerContent size="lg" :close-on-outside-click="!isNew">
-			<div
-				class="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-outline-gray-1 pl-5 pr-2.5"
-			>
-				<DrawerTitle class="min-w-0">
+			<div class="flex items-center gap-1 p-4 pb-0">
+				<DrawerCloseButton />
+				<DrawerTitle class="ml-1 min-w-0">
 					<Breadcrumbs :items="crumbs" />
 				</DrawerTitle>
 				<DrawerDescription class="sr-only">
 					{{ __("An extra tab on the event's public page.") }}
 				</DrawerDescription>
-				<DrawerCloseButton />
 			</div>
 
-			<div class="flex flex-1 flex-col overflow-y-auto overscroll-contain px-7 py-6">
+			<div class="flex flex-1 flex-col overflow-y-auto overscroll-contain px-4 py-6">
 				<input
 					v-model="form.title"
 					:aria-label="__('Title')"

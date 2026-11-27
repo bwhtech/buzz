@@ -135,13 +135,13 @@ const invoiceUrl = computed(() =>
 				</header>
 
 				<TransactionProperties :transaction="transaction" :invoice-url="invoiceUrl" />
-				<TransactionAmountsSection :transaction="transaction" />
 				<TransactionTicketsSection
 					v-if="transaction.tickets.length"
 					:transaction="transaction"
 					:event="event"
 					:can-download-all="canDownloadInvoice"
 				/>
+				<TransactionAmountsSection :transaction="transaction" />
 				<TransactionRefundsSection v-if="transaction.refunds.length" :transaction="transaction" />
 			</BookingActivity>
 		</DrawerContent>
