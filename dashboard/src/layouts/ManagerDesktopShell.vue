@@ -15,6 +15,7 @@ import { useRoute } from "vue-router"
 import CommandPaletteDialog from "@/components/dashboard/command-palette/CommandPaletteDialog.vue"
 import { paletteOpen } from "@/components/dashboard/command-palette/paletteOpen"
 import ManagerSidebarHeader from "@/components/dashboard/ManagerSidebarHeader.vue"
+import NextEventPage from "@/components/dashboard/NextEventPage.vue"
 import NotificationsPanel from "@/components/dashboard/notifications/NotificationsPanel.vue"
 import WorkspaceOpening from "@/components/dashboard/WorkspaceOpening.vue"
 import UserMenu from "@/components/UserMenu.vue"
@@ -88,8 +89,10 @@ watch(headerKey, (key, previous) => {
 
 				<!-- One block, not per row: absolute rows would all collapse onto the
 				     container's corner. my-2, not py-2: the leaving list anchors to the
-				     padding box, so padding here would lift it out of line. -->
-				<div class="nav-stage relative mx-2 my-2">
+				     padding box, so padding here would lift it out of line. The sidebar's only
+				     scroller, so on a short window the header and footer stay put rather than
+				     the whole sidebar scrolling under a scrollbar that clips its labels. -->
+				<div class="nav-stage relative mx-2 my-2 min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
 					<Transition :name="`nav-${direction}`">
 						<div :key="headerKey" class="nav-list flex flex-col gap-0.5">
 							<!-- Stands in for the workspace destinations while it opens. -->
@@ -163,6 +166,7 @@ watch(headerKey, (key, previous) => {
 				<PageHeaderTarget v-if="!fullScreen" />
 				<div class="relative min-h-0 flex-1 overflow-y-auto">
 					<router-view :key="$route.params.eventId as string" />
+					<NextEventPage :items="items" />
 				</div>
 				<WorkspaceOpening />
 			</div>
