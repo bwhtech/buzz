@@ -142,56 +142,9 @@ body {
 	letter-spacing: 0.017em;
 }
 
-/* Mobile only: on wider screens the sidebar's WHEN and WHERE blocks carry these. */
-.event-meta {
-	display: none;
-	flex-direction: column;
-	gap: 6px;
-	margin-top: 8px;
-	color: var(--ink-muted);
-	font-weight: 500;
-}
-
 .listing-description {
 	margin-top: 8px;
 	color: var(--ink-muted);
-}
-
-.meta-item {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	max-width: 100%;
-}
-
-.meta-venue-name {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.meta-locations {
-	padding: 0;
-	border: 0;
-	background: none;
-	color: inherit;
-	font: inherit;
-	text-align: start;
-	cursor: pointer;
-}
-
-.meta-locations:hover .meta-venue-name {
-	text-decoration: underline;
-	text-underline-offset: 3px;
-}
-
-.meta-more-locations {
-	flex: none;
-	padding: 2px 8px;
-	border-radius: 999px;
-	background: radial-gradient(closest-side, var(--surface-gray-2), transparent);
-	color: var(--ink-strong);
-	font-size: 0.85em;
 }
 
 /* Layout: banner, title and content share the wide column; the side panel runs beside them
@@ -1173,8 +1126,20 @@ summary.schedule-summary:focus-visible {
 	object-fit: contain;
 }
 
+.sponsor-initial {
+	display: grid;
+	place-items: center;
+	width: 56px;
+	border-radius: var(--radius);
+	background: var(--surface-raised);
+	color: var(--ink-strong);
+	font-size: 22px;
+	font-weight: 600;
+}
+
 .sponsor-name {
 	font-weight: 500;
+	overflow-wrap: anywhere;
 }
 
 /* Aside */
@@ -1631,10 +1596,6 @@ summary.schedule-summary:focus-visible {
 	color: var(--ink-muted);
 }
 
-.narrow-links {
-	display: none;
-}
-
 /* Listing */
 
 .listing-filters {
@@ -1980,34 +1941,6 @@ summary:focus-visible {
 
 	.ticket-stack-link {
 		display: inline-flex;
-	}
-
-	.event-meta {
-		display: flex;
-	}
-
-	.event-layout {
-		grid-template-columns: minmax(0, 1fr);
-		grid-template-areas:
-			"manage"
-			"banner"
-			"intro"
-			"aside"
-			"main";
-	}
-
-	/* The meta row under the title carries when and where on a narrow screen; the cards stay. */
-	.event-aside {
-		margin-top: 20px;
-	}
-
-	.event-aside > :not(.side-cards) {
-		display: none;
-	}
-
-	.narrow-links {
-		display: block;
-		margin-bottom: 24px;
 	}
 
 	.prose {
