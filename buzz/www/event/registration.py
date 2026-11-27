@@ -18,7 +18,14 @@ class RegistrationCard:
 		self.event = event
 
 	def as_dict(self) -> dict:
-		return self.state_card() | {"booked": self.booked_tickets()}
+		card = self.state_card()
+		return card | {"booked": self.booked_tickets(), "bar": self.bar_summary(card)}
+
+	def bar_summary(self, card: dict) -> dict | None:
+		"""The price and spots left, apart, for the page's bottom bar on a phone."""
+		if card["state"] != "open" or not self.ticket_types:
+			return None
+		return {"price": self.price_label(), "spots": self.spots_label()}
 
 	def state_card(self) -> dict:
 		if are_registrations_closed(self.event):
@@ -121,7 +128,8 @@ class RegistrationCard:
 		remaining = [self.remaining_by_type[str(ticket_type.name)] for ticket_type in self.ticket_types]
 		if -1 in remaining:
 			return None
-		return _("{0} spots left").format(sum(remaining))
+		spots = sum(remaining)
+		return _("1 spot left") if spots == 1 else _("{0} spots left").format(spots)
 
 
 class ProposalCard:

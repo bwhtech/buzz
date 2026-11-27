@@ -1,5 +1,6 @@
 import { bannerPattern } from "./event_banner"
 import { EventCountdown } from "./event_countdown"
+import { mountEventMobile } from "./event_mobile"
 import { EventSchedule } from "./event_schedule"
 import { mountVenueMaps } from "./venue_map"
 
@@ -30,3 +31,4 @@ if (!customElements.get("event-countdown")) customElements.define("event-countdo
 if (!customElements.get("event-schedule")) customElements.define("event-schedule", EventSchedule)
 
 mountVenueMaps()
+mountEventMobile()

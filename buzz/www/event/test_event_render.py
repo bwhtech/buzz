@@ -162,7 +162,7 @@ class TestEventPageRender(IntegrationTestCase):
 		countdown = EventPage(self.route).as_context()["countdown"]
 		self.assertEqual(countdown["ends_at"], "2099-01-06T23:59:59+00:00")
 
-	def test_grouped_venue_shows_first_location_and_count_of_the_rest_in_the_meta(self):
+	def test_grouped_venue_shows_first_location_and_count_of_the_rest_in_the_details(self):
 		museum = EventVenueFactory.create(team=self.team, venue_name="National Museum").name
 		hotel = EventVenueFactory.create(team=self.team, venue_name="Millennium Hotel").name
 		group = EventVenueFactory.create(
@@ -174,9 +174,9 @@ class TestEventPageRender(IntegrationTestCase):
 
 		page = render(self.route)
 
-		self.assertIn('<span class="meta-venue-name">National Museum</span>', page)
-		self.assertIn(">+1</span>", page)
-		self.assertIn('class="meta-item meta-locations" data-venue-map', page)
+		self.assertIn('<span class="fact-primary">National Museum</span>', page)
+		self.assertIn("+1 more locations", page)
+		self.assertIn('class="event-fact" data-venue-map', page)
 		self.assertIn('id="venue-locations"', page)
 
 	def set_event(self, values: dict):

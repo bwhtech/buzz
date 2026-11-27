@@ -20,6 +20,7 @@ from buzz.events.doctype.sponsorship_tier.sponsorship_tier import default_price
 from buzz.events.online_meeting import OnlineMeeting
 from buzz.utils import datetime_in_time_zone, format_gmt_offset, get_time_zone_label
 from buzz.www.event.banner_color import banner_color
+from buzz.www.event.calendar_links import CalendarLinks
 from buzz.www.event.date_range import (
 	RANGE_SEPARATOR,
 	EventDateRange,
@@ -114,6 +115,9 @@ class EventPage:
 			"proposal_card": ProposalCard(self.event).as_dict(),
 			"countdown": event_countdown(self.event) if self.event.show_countdown else None,
 			"manage_url": self.manage_url(),
+			"calendar_links": CalendarLinks.for_event(self.event),
+			"schedule_summary": self.schedule_summary(),
+			"schedule_url": self.schedule_url,
 		}
 		meta = EventMeta(self.event, context)
 		return context | {"meta": meta.as_dict(), "structured_data": meta.structured_data()}
@@ -200,6 +204,14 @@ class EventPage:
 	@property
 	def schedule(self) -> list[dict]:
 		return self.public_schedule.days
+
+	def schedule_summary(self) -> str | None:
+		days = self.schedule
+		sessions = sum(len(day["rows"]) for day in days)
+		if not sessions:
+			return None
+		count = _("1 session") if sessions == 1 else _("{0} sessions").format(sessions)
+		return _("{0} across {1} days").format(count, len(days)) if len(days) > 1 else count
 
 	@cached_property
 	def speakers(self) -> list[dict]:

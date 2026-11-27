@@ -1,0 +1,832 @@
+/* The event page on a phone: one column in reading order, a host line and detail rows under the
+   title, a bottom bar once the ticket card scrolls away, and sheets for the details. */
+
+.host-line,
+.event-facts,
+.banner-menu-button,
+.read-more,
+.event-dock {
+	display: none;
+}
+
+@media (max-width: 720px) {
+	/* One column: main and aside give up their boxes so their blocks can interleave. */
+	.event-layout {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.event-layout > *,
+	.event-main > *,
+	.event-aside > * {
+		min-width: 0;
+	}
+
+	.event-main,
+	.event-aside {
+		display: contents;
+	}
+
+	.event-banner-frame {
+		order: 1;
+	}
+
+	.event-intro {
+		order: 2;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0;
+	}
+
+	.side-cards {
+		order: 3;
+		margin: 20px 0 0;
+	}
+
+	.tabs,
+	.tab-input {
+		display: none;
+	}
+
+	.event-main .tab-panel,
+	.event-main:has(.tab-input) .tab-panel {
+		display: block;
+		order: 7;
+		margin-top: 36px;
+		animation: none;
+	}
+
+	#panel-about {
+		order: 4;
+	}
+
+	#panel-speakers {
+		order: 5;
+	}
+
+	#panel-sponsors {
+		order: 6;
+	}
+
+	.event-aside > .aside-block {
+		display: none;
+		margin-top: 36px;
+		padding-top: 0;
+		border-top: 0;
+	}
+
+	.event-aside > .venue {
+		display: block;
+		order: 8;
+	}
+
+	.event-aside > .hosts {
+		display: block;
+		order: 9;
+	}
+
+	.event-aside > .links {
+		display: block;
+		order: 10;
+	}
+
+	body:has(.event-dock) {
+		padding-bottom: 120px;
+	}
+
+	/* Section headings: small, uppercase and muted */
+	.section-title,
+	.event-aside .label {
+		margin: 0 0 12px;
+		color: var(--ink-muted);
+		font-size: 12px;
+		font-weight: 600;
+		letter-spacing: 0;
+		line-height: 1.4;
+		text-transform: uppercase;
+	}
+
+	/* With every panel stacked, the headings the tab strip stood in for come back */
+	.event-main:has(.tab-input) .tab-panel > .section-title {
+		position: static;
+		width: auto;
+		height: auto;
+		overflow: visible;
+		clip-path: none;
+		white-space: normal;
+	}
+
+	/* A single venue is one card that opens the map app */
+	.venue-card {
+		position: relative;
+		overflow: hidden;
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		background: var(--surface);
+	}
+
+	/* The card opens the map app, so the embed's zoom buttons, which can't be used, sit above
+	   the crop. Its attribution, at the bottom, stays in view. */
+	.venue-card .venue-map {
+		display: block;
+		height: 240px;
+		margin: -72px 0 0;
+		border: 0;
+		border-radius: 0;
+		pointer-events: none;
+	}
+
+	.venue-card .aside-value {
+		padding: 12px 14px 0;
+		font-size: 15px;
+	}
+
+	.venue-card .aside-note {
+		padding: 0 14px 14px;
+	}
+
+	.venue-card .aside-value:last-child {
+		padding-bottom: 14px;
+	}
+
+	.venue-card .venue-link::after {
+		content: "";
+		position: absolute;
+		inset: 0;
+	}
+
+	.side-card-title {
+		overflow-wrap: anywhere;
+	}
+
+	/* The booked stub keeps to one line: "You're registered" and the count side by side */
+	.ticket-stack-text {
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: baseline;
+		column-gap: 6px;
+	}
+
+	.speakers {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 20px 10px;
+	}
+
+	.speaker {
+		align-items: center;
+		text-align: center;
+	}
+
+	.speaker-name {
+		display: -webkit-box;
+		overflow: hidden;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+	}
+
+	.speaker-role {
+		display: -webkit-box;
+		overflow: hidden;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		font-size: 12px;
+	}
+
+	/* About: long text collapses behind a fade, with a pill to open it */
+	#panel-about[data-long] {
+		display: flex;
+		flex-direction: column;
+	}
+
+	#panel-about[data-long]:not([data-open]) .prose {
+		max-height: 360px;
+		overflow: hidden;
+		-webkit-mask-image: linear-gradient(#000 calc(100% - 96px), transparent);
+		mask-image: linear-gradient(#000 calc(100% - 96px), transparent);
+	}
+
+	.read-more:not([hidden]) {
+		display: inline-flex;
+		align-self: center;
+		align-items: center;
+		gap: 6px;
+		height: 36px;
+		margin-top: 4px;
+		padding: 0 16px;
+		border: 0;
+		border-radius: 999px;
+		background: var(--surface-raised);
+		color: var(--ink-strong);
+		font: inherit;
+		font-size: 14px;
+		font-weight: 600;
+		cursor: pointer;
+		transition:
+			transform 160ms var(--ease-out),
+			background-color 150ms ease-out;
+	}
+
+	.read-more:active {
+		transform: scale(0.97);
+	}
+
+	.read-more .icon {
+		transition: transform 200ms var(--ease-out);
+	}
+
+	#panel-about[data-open] .read-more .icon {
+		transform: rotate(180deg);
+	}
+
+	/* Share and more, on the banner */
+	.banner-menu-button {
+		position: absolute;
+		top: 10px;
+		right: 12px;
+		z-index: 2;
+		display: grid;
+		place-items: center;
+		width: 36px;
+		height: 36px;
+		border: 0;
+		border-radius: 999px;
+		background: rgb(0 0 0 / 0.45);
+		color: #fff;
+		-webkit-backdrop-filter: blur(8px);
+		backdrop-filter: blur(8px);
+		cursor: pointer;
+		transition: transform 160ms var(--ease-out);
+	}
+
+	.banner-menu-button:active {
+		transform: scale(0.94);
+	}
+
+	/* Hosted by: overlapping round avatars and the names */
+	.host-line {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		min-width: 0;
+		margin-top: 10px;
+		color: var(--ink-muted);
+		font-size: 14px;
+		text-decoration: none;
+	}
+
+	a.host-line:active {
+		opacity: 0.7;
+	}
+
+	.host-line strong {
+		color: var(--ink-strong);
+		font-weight: 600;
+	}
+
+	.host-line-text {
+		display: flex;
+		min-width: 0;
+		white-space: nowrap;
+	}
+
+	.host-line-names {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	.host-line-rest {
+		flex-shrink: 0;
+	}
+
+	.avatar-group {
+		display: inline-flex;
+		flex-shrink: 0;
+	}
+
+	.avatar-group .host-avatar {
+		width: 22px;
+		height: 22px;
+		margin-left: -6px;
+		border-radius: 999px;
+		box-shadow: 0 0 0 2px var(--page-bg);
+		font-size: 10px;
+	}
+
+	.avatar-group .host-avatar:first-child {
+		margin-left: 0;
+	}
+
+	.host-avatar {
+		display: inline-grid;
+		flex-shrink: 0;
+		place-items: center;
+		background: var(--surface-raised);
+		color: var(--ink-strong);
+		font-weight: 600;
+		object-fit: cover;
+	}
+
+	/* Detail rows: when, where and the schedule */
+	.event-facts {
+		display: flex;
+		flex-direction: column;
+		margin-top: 16px;
+	}
+
+	.event-fact {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		width: 100%;
+		padding: 8px 0;
+		border: 0;
+		background: none;
+		color: inherit;
+		font: inherit;
+		text-align: start;
+		text-decoration: none;
+		-webkit-tap-highlight-color: transparent;
+	}
+
+	:is(a, button).event-fact {
+		cursor: pointer;
+	}
+
+	:is(a, button).event-fact:active .fact-tile {
+		transform: scale(0.96);
+	}
+
+	.fact-tile {
+		display: grid;
+		flex-shrink: 0;
+		place-items: center;
+		width: 44px;
+		height: 44px;
+		border: 1px solid var(--border);
+		border-radius: calc(var(--radius) - 2px);
+		background: var(--surface);
+		color: var(--ink-strong);
+		transition: transform 160ms var(--ease-out);
+	}
+
+	.fact-tile .icon {
+		width: 18px;
+		height: 18px;
+	}
+
+	.date-tile {
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+
+	.date-tile-month {
+		width: 100%;
+		padding: 2px 0;
+		background: var(--surface-raised);
+		color: var(--ink-muted);
+		font-size: 9px;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-align: center;
+		text-transform: uppercase;
+	}
+
+	.date-tile-day {
+		flex: 1;
+		display: grid;
+		place-items: center;
+		color: var(--ink-title);
+		font-size: 17px;
+		font-weight: 650;
+		line-height: 1;
+	}
+
+	.fact-text {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		min-width: 0;
+	}
+
+	.fact-primary {
+		display: -webkit-box;
+		overflow: hidden;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		color: var(--ink-strong);
+		font-size: 15px;
+		font-weight: 550;
+		line-height: 1.35;
+	}
+
+	.fact-secondary {
+		overflow: hidden;
+		color: var(--ink-muted);
+		font-size: 13px;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.fact-trailing {
+		display: flex;
+		color: var(--ink-muted);
+		opacity: 0.6;
+	}
+
+	/* Bottom bar: price and spots over a full-width button, with the booked note above */
+	.event-dock {
+		position: fixed;
+		inset: auto 0 0;
+		z-index: 20;
+		display: flex;
+		flex-direction: column;
+		transform: translateY(110%);
+		transition: transform 280ms var(--ease-out);
+	}
+
+	.event-dock:not([data-shown]) {
+		transition-duration: 200ms;
+	}
+
+	.event-dock[data-shown] {
+		transform: translateY(0);
+	}
+
+	.dock-bar {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		padding: 10px 16px calc(12px + env(safe-area-inset-bottom));
+		border-top: 1px solid var(--border);
+		background: color-mix(in oklab, var(--page-bg) 92%, transparent);
+		-webkit-backdrop-filter: blur(14px);
+		backdrop-filter: blur(14px);
+	}
+
+	.dock-summary {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 12px;
+		font-size: 13px;
+	}
+
+	.dock-price {
+		overflow: hidden;
+		color: var(--ink-strong);
+		font-weight: 500;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.dock-spots {
+		flex-shrink: 0;
+		color: var(--ink-muted);
+	}
+
+	.dock-button {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.dock-booked {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin: 0 12px -1px;
+		padding: 9px 14px;
+		border: 1px solid var(--border);
+		border-bottom: 0;
+		border-radius: var(--radius) var(--radius) 0 0;
+		background: var(--surface-raised);
+		color: var(--ink-muted);
+		font-size: 13px;
+		text-decoration: none;
+	}
+
+	.dock-booked .booked-dot {
+		margin: 0 2px;
+	}
+
+	.dock-booked-text {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.dock-booked-text strong {
+		color: var(--ink-strong);
+		font-weight: 500;
+	}
+
+	.dock-booked-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 2px;
+		color: var(--ink-strong);
+		font-weight: 500;
+	}
+
+	.dock-booked-link .icon {
+		width: 14px;
+		height: 14px;
+	}
+
+	/* Bottom sheet */
+	.event-sheet {
+		position: fixed;
+		inset: auto 0 0;
+		width: 100%;
+		max-width: none;
+		max-height: 85dvh;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		background: transparent;
+		color: var(--ink-body);
+	}
+
+	.event-sheet::backdrop {
+		background: rgb(0 0 0 / 0.4);
+		opacity: 0;
+		transition: opacity 300ms var(--ease-out);
+	}
+
+	.event-sheet[data-open]::backdrop {
+		opacity: 1;
+	}
+
+	.event-sheet-panel {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		max-height: 85dvh;
+		overflow-y: auto;
+		padding: 8px 16px calc(20px + env(safe-area-inset-bottom));
+		border-radius: 18px 18px 0 0;
+		background: var(--page-bg);
+		transform: translateY(100%);
+		transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+	}
+
+	.event-sheet[data-open] .event-sheet-panel {
+		transform: translateY(0);
+	}
+
+	/* Closing is quicker than opening: the page is answering, not presenting */
+	.event-sheet:not([data-open]) .event-sheet-panel,
+	.event-sheet:not([data-open])::backdrop {
+		transition-duration: 220ms;
+	}
+
+	.event-sheet-grip {
+		width: 36px;
+		height: 4px;
+		margin: 0 auto;
+		border-radius: 999px;
+		background: var(--border);
+	}
+
+	.event-sheet-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	.event-sheet-title {
+		overflow: hidden;
+		color: var(--ink-title);
+		font-size: 17px;
+		font-weight: 650;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.event-sheet-close {
+		display: grid;
+		flex-shrink: 0;
+		place-items: center;
+		width: 32px;
+		height: 32px;
+		border: 0;
+		border-radius: 999px;
+		background: var(--surface-raised);
+		color: var(--ink-strong);
+		cursor: pointer;
+	}
+
+	.event-sheet-body {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.sheet-timeline {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		padding-left: 14px;
+		border-left: 2px solid var(--border);
+	}
+
+	.sheet-timeline li {
+		display: flex;
+		flex-direction: column;
+		color: var(--ink-strong);
+		font-size: 15px;
+		font-weight: 550;
+	}
+
+	.sheet-timeline-label {
+		color: var(--ink-muted);
+		font-size: 12px;
+		font-weight: 500;
+	}
+
+	.sheet-note {
+		color: var(--ink-muted);
+		font-size: 13px;
+	}
+
+	.sheet-menu,
+	.sheet-hosts {
+		display: flex;
+		flex-direction: column;
+		margin-inline: -8px;
+	}
+
+	.sheet-menu-row,
+	.sheet-host {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		width: 100%;
+		padding: 10px 8px;
+		border: 0;
+		border-radius: 8px;
+		background: none;
+		color: var(--ink-strong);
+		font: inherit;
+		font-size: 15px;
+		text-align: start;
+		text-decoration: none;
+		cursor: pointer;
+	}
+
+	:is(.sheet-menu-row, a.sheet-host):active {
+		background: var(--surface-raised);
+	}
+
+	.sheet-host .host-avatar {
+		width: 32px;
+		height: 32px;
+		border-radius: 6px;
+		font-size: 13px;
+	}
+
+	.sheet-host-name {
+		flex: 1;
+		min-width: 0;
+		overflow-wrap: anywhere;
+	}
+
+	.sheet-host .icon {
+		color: var(--ink-muted);
+		opacity: 0.6;
+	}
+
+	/* Add to calendar */
+	.calendar-options {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	.sheet-note ~ .calendar-options {
+		margin-top: 6px;
+		padding-top: 16px;
+		border-top: 1px solid var(--border);
+	}
+
+	.event-sheet-body > .calendar-options:first-child .calendar-heading {
+		display: none;
+	}
+
+	.calendar-heading {
+		color: var(--ink-strong);
+		font-size: 14px;
+		font-weight: 600;
+	}
+
+	.calendar-list {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 6px;
+	}
+
+	.calendar-option {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 6px;
+		width: 100%;
+		padding: 4px 0;
+		border: 0;
+		background: none;
+		color: var(--ink-body);
+		font: inherit;
+		font-size: 12px;
+		text-decoration: none;
+		cursor: pointer;
+	}
+
+	.calendar-tile {
+		display: grid;
+		place-items: center;
+		width: 48px;
+		height: 48px;
+		border-radius: 12px;
+		background: var(--surface-raised);
+		color: var(--ink-strong);
+		transition: transform 160ms var(--ease-out);
+	}
+
+	.calendar-option:active .calendar-tile {
+		transform: scale(0.94);
+	}
+
+	.calendar-tile .icon {
+		width: 20px;
+		height: 20px;
+	}
+
+	.calendar-logo {
+		width: 28px;
+		height: 28px;
+		object-fit: contain;
+	}
+
+	[data-provider="ics"] .calendar-tile {
+		color: var(--ink-muted);
+	}
+
+	.event-toast {
+		position: fixed;
+		bottom: 132px;
+		left: 50%;
+		z-index: 30;
+		padding: 8px 14px;
+		border-radius: 999px;
+		background: var(--ink-strong);
+		color: var(--page-bg);
+		font-size: 13px;
+		opacity: 0;
+		pointer-events: none;
+		transform: translate(-50%, 8px);
+		transition:
+			opacity 200ms ease-out,
+			transform 200ms var(--ease-out);
+	}
+
+	.event-toast[data-shown] {
+		opacity: 1;
+		transform: translate(-50%, 0);
+	}
+}
+
+@media (max-width: 720px) and (hover: hover) and (pointer: fine) {
+	:is(.sheet-menu-row, a.sheet-host, .dock-booked, .calendar-option):hover {
+		background: var(--surface-raised);
+	}
+
+	.calendar-option:hover {
+		background: none;
+	}
+
+	.calendar-option:hover .calendar-tile {
+		background: var(--border);
+	}
+}
+
+/* Reduced motion: nothing slides; the sheet only fades */
+@media (max-width: 720px) and (prefers-reduced-motion: reduce) {
+	.event-dock {
+		transition-duration: 1ms;
+	}
+
+	.event-sheet-panel {
+		opacity: 0;
+		transform: none;
+		transition: opacity 200ms ease-out;
+	}
+
+	.event-sheet[data-open] .event-sheet-panel {
+		opacity: 1;
+	}
+}

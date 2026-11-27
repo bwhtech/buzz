@@ -1,0 +1,173 @@
+{# The event page's phone layout: host line, detail rows, sheets and the bottom bar. Wider screens hide all of it. #}
+{# Each macro escapes on its own: a macro escapes by the file it is defined in, not the page that calls it. #}
+
+{% macro icon(name) %}{% autoescape true %}<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+	{%- if name == "calendar" %}<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+	{%- elif name == "pin" %}<path d="M20 10c0 5-8 12-8 12s-8-7-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/>
+	{%- elif name == "video" %}<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>
+	{%- elif name == "list" %}<path d="M3 5h.01M3 12h.01M3 19h.01M8 5h13M8 12h13M8 19h13"/>
+	{%- elif name == "chevron" %}<path d="m9 18 6-6-6-6"/>
+	{%- elif name == "chevron-down" %}<path d="m6 9 6 6 6-6"/>
+	{%- elif name == "out" %}<path d="M7 7h10v10"/><path d="M7 17 17 7"/>
+	{%- elif name == "more" %}<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+	{%- elif name == "share" %}<path d="M12 2v13"/><path d="m16 6-4-4-4 4"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+	{%- elif name == "link" %}<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+	{%- elif name == "download" %}<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>
+	{%- elif name == "close" %}<path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+	{%- endif %}</svg>{% endautoescape %}{% endmacro %}
+
+{# App icons from Wikimedia Commons (public domain). #}
+{% macro calendar_logo(name) %}{% autoescape true %}<img class="calendar-logo" src="/assets/buzz/images/calendars/{{ name }}.svg" alt="">{% endautoescape %}{% endmacro %}
+
+{% macro host_avatar(host) %}{% autoescape true %}{% if host.logo %}<img class="host-avatar" src="{{ host.logo }}" alt="">{% else %}<span class="host-avatar">{{ host.label[:1] | upper }}</span>{% endif %}{% endautoescape %}{% endmacro %}
+
+{% macro host_line() %}{% autoescape true %}{% if hosts %}
+{% set many = hosts | length > 1 %}
+{% set tag = "a" if many or hosts[0].url else "span" %}
+<{{ tag }} class="host-line"{% if tag == "a" %} href="{{ hosts[0].url or '#' }}"{% endif %}{% if many %} data-sheet-open="hosts" aria-haspopup="dialog"{% endif %}>
+	<span class="avatar-group">{% for host in hosts[:4] %}{{ host_avatar(host) }}{% endfor %}</span>
+	<span class="host-line-text">{{ _("Hosted by") }}&nbsp;<strong class="host-line-names">{{ hosts[0].label }}
+		{%- if hosts | length == 2 %} &amp; {{ hosts[1].label }}{% endif %}</strong>
+		{%- if hosts | length > 2 %}<span class="host-line-rest">&nbsp;&amp; {{ _("{0} others").format(hosts | length - 1) }}</span>{% endif %}</span>
+</{{ tag }}>
+{% endif %}{% endautoescape %}{% endmacro %}
+
+{% macro fact_body(primary, secondary, trailing) %}{% autoescape true %}
+<span class="fact-text"><span class="fact-primary">{{ primary }}</span>{% if secondary %}<span class="fact-secondary">{{ secondary }}</span>{% endif %}</span>
+{% if trailing %}<span class="fact-trailing">{{ icon(trailing) }}</span>{% endif %}
+{% endautoescape %}{% endmacro %}
+
+{% macro where_fact() %}{% autoescape true %}
+{% if venue and venue.locations %}
+<button type="button" class="event-fact" data-venue-map aria-haspopup="dialog">
+	<span class="fact-tile">{{ icon("pin") }}</span>
+	{{ fact_body(venue.locations[0].venue_name, _("+{0} more locations").format(venue.locations | length - 1), "chevron") }}
+</button>
+{% elif venue %}
+{% set tag = "a" if venue.link else "div" %}
+<{{ tag }} class="event-fact"{% if venue.link %} href="{{ venue.link | e }}" target="_blank" rel="noopener noreferrer"{% endif %}>
+	<span class="fact-tile">{{ icon("pin") }}</span>
+	{{ fact_body(venue.name, venue.address.splitlines() | last if venue.address else "", "out" if venue.link else "") }}
+</{{ tag }}>
+{% elif online_label %}
+<div class="event-fact">
+	<span class="fact-tile">{{ icon("video") }}</span>
+	{{ fact_body(online_label, _("Registered guests get the link to join.") if register_url else "", "") }}
+</div>
+{% elif event.medium != "Online" %}
+<div class="event-fact">
+	<span class="fact-tile">{{ icon("pin") }}</span>
+	{{ fact_body(_("Venue to be announced"), "", "") }}
+</div>
+{% endif %}
+{% endautoescape %}{% endmacro %}
+
+{% macro facts() %}{% autoescape true %}
+<div class="event-facts">
+	{% set when = date_range.date_range_with_weekdays if date_range.is_multi_day else event_date.full_date %}
+	{% set tag = "button" if calendar_links else "div" %}
+	<{{ tag }}{% if calendar_links %} type="button" data-sheet-open="when" aria-haspopup="dialog"{% endif %} class="event-fact">
+		{% if event_date.day %}<span class="fact-tile date-tile" aria-hidden="true"><span class="date-tile-month">{{ event_date.month }}</span><span class="date-tile-day">{{ event_date.day }}</span></span>
+		{% else %}<span class="fact-tile">{{ icon("calendar") }}</span>{% endif %}
+		{{ fact_body(when, event_date.time_range, "chevron" if calendar_links else "") }}
+	</{{ tag }}>
+	{{ where_fact() }}
+	{% if schedule_summary %}
+	<a class="event-fact" href="{{ schedule_url }}">
+		<span class="fact-tile">{{ icon("list") }}</span>
+		{{ fact_body(_("View schedule"), schedule_summary, "chevron") }}
+	</a>
+	{% endif %}
+</div>
+{% endautoescape %}{% endmacro %}
+
+{% macro menu_button() %}{% autoescape true %}
+<button type="button" class="banner-menu-button" data-sheet-open="more" aria-haspopup="dialog" aria-label="{{ _('Share and more') }}">{{ icon("more") }}</button>
+{% endautoescape %}{% endmacro %}
+
+{% macro read_more() %}{% autoescape true %}
+<button type="button" class="read-more" data-read-more data-open-label="{{ _('Show less') }}" aria-expanded="false" hidden><span>{{ _("Read more") }}</span>{{ icon("chevron-down") }}</button>
+{% endautoescape %}{% endmacro %}
+
+{% macro calendar_options() %}{% autoescape true %}
+<div class="calendar-options">
+	<p class="calendar-heading">{{ _("Add to calendar") }}</p>
+	<ul class="calendar-list">
+		<li><a class="calendar-option" data-provider="google" href="{{ calendar_links.google }}" target="_blank" rel="noopener noreferrer"><span class="calendar-tile">{{ calendar_logo("google") }}</span>Google</a></li>
+		<li><button type="button" class="calendar-option" data-provider="apple" data-action="ics"><span class="calendar-tile">{{ calendar_logo("apple") }}</span>Apple</button></li>
+		<li><a class="calendar-option" data-provider="outlook" href="{{ calendar_links.outlook }}" target="_blank" rel="noopener noreferrer"><span class="calendar-tile">{{ calendar_logo("outlook") }}</span>Outlook</a></li>
+		<li><button type="button" class="calendar-option" data-provider="ics" data-action="ics"><span class="calendar-tile">{{ icon("download") }}</span>{{ _(".ics file") }}</button></li>
+	</ul>
+</div>
+{% endautoescape %}{% endmacro %}
+
+{% macro dock() %}{% autoescape true %}{% if registration.action_url %}
+{% set bar = registration.bar %}
+<div class="event-dock" data-event-dock>
+	{% if registration.booked %}
+	<a class="dock-booked" href="{{ registration.booked.url }}">
+		<span class="booked-dot" aria-hidden="true"></span>
+		<span class="dock-booked-text"><strong>{{ _("You're registered") }}</strong> {{ registration.booked.label }}</span>
+		<span class="dock-booked-link">{{ _("View") }}{{ icon("chevron") }}</span>
+	</a>
+	{% endif %}
+	<div class="dock-bar">
+		<p class="dock-summary">
+			<span class="dock-price">{{ bar.price if bar else (registration.subtitle or registration.title) }}</span>
+			{% if bar and bar.spots %}<span class="dock-spots">{{ bar.spots }}</span>{% endif %}
+		</p>
+		<a class="es-button dock-button" data-variant="solid" data-size="lg" href="{{ registration.action_url }}">{{ registration.action_label }}</a>
+	</div>
+</div>
+{% endif %}{% endautoescape %}{% endmacro %}
+
+{% macro sheets() %}{% autoescape true %}
+<dialog class="event-sheet" data-event-sheet aria-labelledby="event-sheet-title">
+	<div class="event-sheet-panel">
+		<span class="event-sheet-grip" aria-hidden="true"></span>
+		<header class="event-sheet-head">
+			<h2 class="event-sheet-title" id="event-sheet-title"></h2>
+			<button type="button" class="event-sheet-close" data-action="close-sheet" aria-label="{{ _('Close') }}">{{ icon("close") }}</button>
+		</header>
+		<div class="event-sheet-body"></div>
+	</div>
+</dialog>
+{% if calendar_links %}
+<script type="application/json" data-calendar-ics>{{ calendar_links.ics | tojson }}</script>
+<template data-sheet="when" data-title="{{ _('When') }}">
+	<ol class="sheet-timeline">
+		{% if date_range.is_multi_day %}
+		{% for label, moment in [(_("Starts"), date_range.start), (_("Ends"), date_range.end)] %}
+		<li><span class="sheet-timeline-label">{{ label }}</span><span>{{ moment.date }}{% if moment.time %} · {{ moment.time }}{% endif %}</span></li>
+		{% endfor %}
+		{% else %}
+		<li><span class="sheet-timeline-label">{{ _("Date") }}</span><span>{{ event_date.full_date }}</span></li>
+		{% if event_date.time_range %}<li><span class="sheet-timeline-label">{{ _("Time") }}</span><span>{{ event_date.time_range }}</span></li>{% endif %}
+		{% endif %}
+	</ol>
+	<p class="sheet-note">{{ _("Times in {0}").format(timezone_label_with_offset) }}</p>
+	{{ calendar_options() }}
+</template>
+<template data-sheet="calendar" data-title="{{ _('Add to calendar') }}">{{ calendar_options() }}</template>
+{% endif %}
+<template data-sheet="more" data-title="{{ event.title }}">
+	<div class="sheet-menu">
+		<button type="button" class="sheet-menu-row" data-action="share" data-done-label="{{ _('Link copied') }}">{{ icon("share") }}{{ _("Share") }}</button>
+		<button type="button" class="sheet-menu-row" data-action="copy-link" data-done-label="{{ _('Link copied') }}">{{ icon("link") }}{{ _("Copy link") }}</button>
+		{% if calendar_links %}<button type="button" class="sheet-menu-row" data-sheet-open="calendar">{{ icon("calendar") }}{{ _("Add to calendar") }}</button>{% endif %}
+	</div>
+</template>
+{% if hosts | length > 1 %}
+<template data-sheet="hosts" data-title="{{ _('Hosted by') }}">
+	<ul class="sheet-hosts">
+		{% for host in hosts %}
+		<li>
+			{% set tag = "a" if host.url else "div" %}
+			<{{ tag }} class="sheet-host"{% if host.url %} href="{{ host.url }}"{% endif %}>{{ host_avatar(host) }}<span class="sheet-host-name">{{ host.label }}</span>{% if host.url %}{{ icon("chevron") }}{% endif %}</{{ tag }}>
+		</li>
+		{% endfor %}
+	</ul>
+</template>
+{% endif %}
+<div class="event-toast" role="status" aria-live="polite"></div>
+{% endautoescape %}{% endmacro %}
