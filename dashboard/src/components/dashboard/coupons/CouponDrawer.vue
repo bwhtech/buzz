@@ -143,7 +143,7 @@ const couponStatus = computed(() => {
 	if (coupon.status === "Ended") return { theme: "gray" as const, title: "Coupon has ended" }
 	if (coupon.status === "Scheduled")
 		return {
-			theme: "gray" as const,
+			theme: "blue" as const,
 			title: `Goes live on ${dayjsLocal(coupon.starts_on ?? undefined).format("D MMM YYYY")}`,
 		}
 	return { theme: "green" as const, title: "Coupon is active" }

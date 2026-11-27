@@ -30,6 +30,7 @@ const TYPE_STYLES = {
 // The solid badge shades, so the dot reads as the same status colour.
 const STATUS_DOTS = {
 	green: "bg-surface-green-7",
+	blue: "bg-surface-blue-7",
 	amber: "bg-surface-amber-7",
 	gray: "bg-surface-gray-5",
 }

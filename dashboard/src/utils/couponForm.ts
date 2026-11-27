@@ -8,7 +8,6 @@ export type CouponValues = Pick<
 	| "discount_type"
 	| "discount_percentage"
 	| "discount_amounts"
-	| "maximum_discount_amounts"
 	| "applies_to_all_ticket_types"
 	| "ticket_types"
 	| "minimum_requirement"
@@ -31,7 +30,6 @@ export function blankCouponValues(
 		discount_type: couponType === "Access Code" ? "None" : "Percentage",
 		discount_percentage: 0,
 		discount_amounts: [],
-		maximum_discount_amounts: [],
 		applies_to_all_ticket_types: true,
 		ticket_types: [],
 		minimum_requirement: "None",
@@ -171,11 +169,6 @@ export function couponDocValues(values: CouponValues, ticketTypes: CouponTicketT
 		expires_on: values.expires_on || null,
 		discount_amounts: onlyCurrencies(values.discount_amounts, currencies),
 		minimum_order_amounts: onlyCurrencies(values.minimum_order_amounts, currencies),
-		// A zero cap means no cap, so it isn't stored.
-		maximum_discount_amounts:
-			values.discount_type === "Percentage"
-				? onlyCurrencies(values.maximum_discount_amounts, currencies).filter((row) => row.price > 0)
-				: [],
 		ticket_types: coversAllTicketTypes(values)
 			? []
 			: values.ticket_types.map((ticket_type) => ({ ticket_type })),

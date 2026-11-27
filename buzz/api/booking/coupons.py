@@ -1,5 +1,4 @@
 import frappe
-from frappe.utils import flt
 
 from buzz.api.booking.exceptions import InvalidCoupon
 from buzz.api.booking.schemas import DiscountQuote, DiscountQuoteRequest
@@ -52,44 +51,10 @@ def build_cart(request: DiscountQuoteRequest):
 			"user": frappe.session.user,
 		}
 	)
-	cart = cart_lines(request)
-	for ticket_type, _add_ons in cart:
+	for ticket_type in event_ticket_types(request):
 		booking.append("attendees", {"ticket_type": ticket_type})
 	booking.fetch_amounts_from_ticket_types()
-	set_add_on_totals(booking, [add_ons for _ticket_type, add_ons in cart])
 	return booking
-
-
-def cart_lines(request: DiscountQuoteRequest) -> list[tuple[str, list[str]]]:
-	"""Each allowed ticket with the add-ons picked for it."""
-	allowed = set(event_ticket_types(request))
-	add_ons = request.add_ons + [[]] * (len(request.ticket_types) - len(request.add_ons))
-	return [line for line in zip(request.ticket_types, add_ons, strict=False) if line[0] in allowed]
-
-
-def set_add_on_totals(booking, add_ons_per_attendee: list[list[str]]) -> None:
-	"""Price each attendee's add-ons the way a booking would, from the event's enabled add-ons."""
-	prices = add_on_prices(booking, {name for names in add_ons_per_attendee for name in names})
-	for attendee, names in zip(booking.attendees, add_ons_per_attendee, strict=True):
-		attendee.add_on_total = sum(
-			price
-			for scope, price in (prices[name] for name in names if name in prices)
-			if not scope or attendee.ticket_type in scope
-		)
-
-
-def add_on_prices(booking, names: set[str]) -> dict[str, tuple[set[str], float]]:
-	if not names:
-		return {}
-	filters = {
-		"event": booking.event,
-		"enabled": 1,
-		"currency": booking.currency,
-		"name": ["in", list(names)],
-	}
-	fields = ["name", "price", {"ticket_types": ["ticket_type"]}]
-	rows = frappe.get_all("Ticket Add-on", filters=filters, fields=fields)
-	return {row.name: ({str(link.ticket_type) for link in row.ticket_types}, flt(row.price)) for row in rows}
 
 
 def event_ticket_types(request: DiscountQuoteRequest) -> list[str]:

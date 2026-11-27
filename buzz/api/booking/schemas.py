@@ -168,8 +168,6 @@ class DiscountQuoteRequest(APIRequest):
 	event: str
 	currency: str
 	ticket_types: list[str]
-	# The add-ons picked with each ticket, in the order of `ticket_types`.
-	add_ons: list[list[str]] = Field(default_factory=list)
 	coupon_code: str | None = None
 	buyer_email: str | None = None
 

@@ -74,15 +74,6 @@ class TestCouponValidation(CouponTestCase):
 		coupon.enabled = 0
 		coupon.save()
 
-	def test_maximum_discount_must_be_positive(self):
-		with self.assertRaises(frappe.ValidationError):
-			self.create_coupon(maximum_discount_amounts=[{"currency": "INR", "price": 0}])
-
-	def test_maximum_discount_currencies_must_be_unique(self):
-		rows = [{"currency": "INR", "price": 100}, {"currency": "INR", "price": 200}]
-		with self.assertRaises(frappe.ValidationError):
-			self.create_coupon(maximum_discount_amounts=rows)
-
 	def test_percentage_must_be_above_zero(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.create_coupon(discount_percentage=0)
