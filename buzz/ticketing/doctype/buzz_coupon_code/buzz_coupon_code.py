@@ -46,6 +46,7 @@ class BuzzCouponCode(Document):
 		enabled: DF.Check
 		event: DF.Link
 		expires_on: DF.Date | None
+		maximum_discount_amounts: DF.Table[BuzzPrice]
 		minimum_order_amounts: DF.Table[BuzzPrice]
 		minimum_requirement: DF.Literal["None", "Minimum Order Amount", "Minimum Ticket Count"]
 		minimum_ticket_count: DF.Int
@@ -76,6 +77,15 @@ class BuzzCouponCode(Document):
 	def validate_schedule(self):
 		if self.starts_on and self.expires_on and getdate(self.starts_on) > getdate(self.expires_on):
 			frappe.throw(_("The coupon can't start after it expires"))
+		# Checked only when set, so a moved event doesn't block other edits.
+		if self.expires_on and self.has_value_changed("expires_on"):
+			self.validate_expiry_within_event()
+
+	def validate_expiry_within_event(self):
+		event = frappe.get_cached_doc("Buzz Event", str(self.event))
+		event_end = event.end_date or event.start_date
+		if event_end and getdate(self.expires_on) > getdate(event_end):
+			frappe.throw(_("The coupon can't expire after the event ends"))
 
 	def validate_unique_code(self):
 		filters = {"event": self.event, "code": self.code, "name": ["!=", self.name]}
@@ -90,6 +100,8 @@ class BuzzCouponCode(Document):
 			validate_amount_rows(self.discount_amounts, _("Discount Amounts"))
 		elif not 0 < flt(self.discount_percentage) <= 100:
 			frappe.throw(_("Discount Percentage must be more than 0 and at most 100"))
+		elif self.maximum_discount_amounts:
+			validate_amount_rows(self.maximum_discount_amounts, _("Maximum Discount Amounts"))
 
 	def validate_ticket_types(self):
 		if self.coupon_type == "Access Code":
@@ -282,9 +294,11 @@ class BuzzCouponCode(Document):
 	def discount_for(self, booking: "EventBooking") -> float:
 		if self.discount_type == "None":
 			return 0
-		subtotal = self.eligible_subtotal(booking)
+		subtotal = self.discountable_subtotal(booking)
 		if self.discount_type == "Percentage":
-			return flt(subtotal * flt(self.discount_percentage) / 100, 2)
+			discount = flt(subtotal * flt(self.discount_percentage) / 100, 2)
+			maximum = amount_in(self.maximum_discount_amounts, booking.currency)
+			return discount if maximum is None else min(discount, maximum)
 		return min(amount_in(self.discount_amounts, booking.currency) or 0, subtotal)
 
 	def unlocked_ticket_types(self) -> set[str]:
@@ -305,6 +319,11 @@ class BuzzCouponCode(Document):
 
 	def eligible_subtotal(self, booking: "EventBooking") -> float:
 		return sum(flt(attendee.amount) for attendee in self.eligible_attendees(booking))
+
+	def discountable_subtotal(self, booking: "EventBooking") -> float:
+		"""The eligible tickets with their add-ons."""
+		attendees = self.eligible_attendees(booking)
+		return sum(flt(attendee.amount) + flt(attendee.add_on_total) for attendee in attendees)
 
 	def times_used(self, exclude: str | None = None) -> int:
 		return frappe.db.count("Event Booking", self.usage_filters(exclude))

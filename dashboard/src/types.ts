@@ -994,6 +994,8 @@ export interface CouponItem {
 	discount_type: "Percentage" | "Flat Amount" | "None"
 	discount_percentage: number
 	discount_amounts: TierPrice[]
+	/** Caps a percentage discount, per currency. A currency without a row is uncapped. */
+	maximum_discount_amounts: TierPrice[]
 	applies_to_all_ticket_types: boolean
 	ticket_types: string[]
 	minimum_requirement: "None" | "Minimum Order Amount" | "Minimum Ticket Count"
@@ -1019,6 +1021,8 @@ export interface EventCoupons {
 	title: string
 	can_write: boolean
 	registration_link: string | null
+	/** The last day a coupon can run to. */
+	end_date: string | null
 	coupons: CouponItem[]
 	ticket_types: CouponTicketType[]
 	discounted: { currency: string; amount: number }[]

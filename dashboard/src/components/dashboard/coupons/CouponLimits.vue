@@ -5,7 +5,7 @@ import DrawerSection from "@/components/dashboard/DrawerSection.vue"
 import type { CouponValues } from "@/utils/couponForm"
 
 const values = defineModel<CouponValues>({ required: true })
-defineProps<{ minDate: string; disabled?: boolean }>()
+defineProps<{ minDate: string; maxDate?: string; disabled?: boolean }>()
 </script>
 
 <template>
@@ -37,6 +37,7 @@ defineProps<{ minDate: string; disabled?: boolean }>()
 				label="Starts"
 				placeholder="Right away"
 				format="D MMM YYYY"
+				:max="maxDate"
 				:disabled="disabled"
 				@update:model-value="values.starts_on = $event || null"
 			/>
@@ -46,6 +47,7 @@ defineProps<{ minDate: string; disabled?: boolean }>()
 				placeholder="When registration closes"
 				format="D MMM YYYY"
 				:min="values.starts_on || minDate"
+				:max="maxDate"
 				:disabled="disabled"
 				@update:model-value="values.expires_on = $event || null"
 			/>

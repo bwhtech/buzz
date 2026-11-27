@@ -1,3 +1,4 @@
+import frappe
 from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
@@ -52,6 +53,18 @@ class TestEventCoupons(IntegrationTestCase):
 
 		self.assertEqual([row["name"] for row in payload["coupons"]], [coupon])
 		self.assertEqual(payload["coupons"][0]["code"], "EARLYBIRD")
+
+	def test_payload_carries_event_end_date_and_maximum_discount(self):
+		coupon = self.create_coupon(maximum_discount_amounts=[{"currency": "INR", "price": 150}])
+
+		payload = self.payload_as(self.owner)
+
+		self.assertEqual(
+			str(payload["end_date"]), str(frappe.db.get_value("Buzz Event", self.event, "end_date"))
+		)
+		self.assertEqual(
+			self.coupon_in(payload, coupon)["maximum_discount_amounts"], [{"currency": "INR", "price": 150}]
+		)
 
 	def test_counts_redemptions(self):
 		coupon = self.create_coupon(usage_limit=5)

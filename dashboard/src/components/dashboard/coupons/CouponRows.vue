@@ -58,8 +58,7 @@ const isDimmed = (coupon: CouponItem) => ["Disabled", "Used up"].includes(coupon
 								class="size-1.5 rounded-full"
 								:class="{
 									'bg-surface-green-6': coupon.status === 'Active',
-									'bg-surface-blue-6': coupon.status === 'Scheduled',
-									'bg-surface-gray-5': !['Active', 'Scheduled'].includes(coupon.status),
+									'bg-surface-gray-5': coupon.status !== 'Active',
 								}"
 							/>
 							{{ statusLabel(coupon) }}

@@ -37,6 +37,7 @@ const props = defineProps<{
 	// The type a new coupon starts on.
 	newCouponType?: CouponValues["coupon_type"]
 	ticketTypes: CouponTicketType[]
+	eventEndDate: string | null
 	canWrite: boolean
 }>()
 const open = defineModel<boolean>("open", { required: true })
@@ -60,7 +61,7 @@ const freeEventAlert = computed(() => {
 	if (step.value !== 1 || !description) return null
 	const nothingAllowed = !availability.value.firstAllowedType
 	return {
-		theme: nothingAllowed ? ("amber" as const) : ("blue" as const),
+		theme: nothingAllowed ? ("amber" as const) : ("gray" as const),
 		title: nothingAllowed ? "Nothing to create yet" : "This event is free",
 		description,
 		primaryAction: {
@@ -142,7 +143,7 @@ const couponStatus = computed(() => {
 	if (coupon.status === "Ended") return { theme: "gray" as const, title: "Coupon has ended" }
 	if (coupon.status === "Scheduled")
 		return {
-			theme: "blue" as const,
+			theme: "gray" as const,
 			title: `Goes live on ${dayjsLocal(coupon.starts_on ?? undefined).format("D MMM YYYY")}`,
 		}
 	return { theme: "green" as const, title: "Coupon is active" }
@@ -276,7 +277,12 @@ function goBack() {
 									<span class="flex-1 text-sm text-ink-gray-8">{{ typeSummary }}</span>
 									<Button v-if="canChangeType" variant="ghost" label="Change" @click="step = 1" />
 								</div>
-								<CouponForm v-model="draft" :ticket-types="ticketTypes" :disabled="!canWrite" />
+								<CouponForm
+									v-model="draft"
+									:ticket-types="ticketTypes"
+									:event-end-date="eventEndDate"
+									:disabled="!canWrite"
+								/>
 							</div>
 						</Transition>
 					</div>

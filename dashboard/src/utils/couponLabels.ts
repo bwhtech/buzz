@@ -78,9 +78,8 @@ export const statusLabel = (coupon: CouponItem) =>
 		? `Starts ${shortDate(coupon.starts_on)}`
 		: coupon.status
 
-const STATUS_THEMES: Partial<Record<CouponStatus, "green" | "blue" | "amber">> = {
+const STATUS_THEMES: Partial<Record<CouponStatus, "green" | "amber">> = {
 	Active: "green",
-	Scheduled: "blue",
 	"Used up": "amber",
 }
 

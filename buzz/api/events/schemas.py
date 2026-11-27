@@ -342,6 +342,7 @@ class CouponItem(APIResponse):
 	discount_type: Literal["Percentage", "Flat Amount", "None"]
 	discount_percentage: float
 	discount_amounts: list[CurrencyPrice]
+	maximum_discount_amounts: list[CurrencyPrice]
 	applies_to_all_ticket_types: bool
 	ticket_types: list[str]
 	minimum_requirement: Literal["None", "Minimum Order Amount", "Minimum Ticket Count"]
@@ -359,6 +360,8 @@ class EventCoupons(APIResponse):
 	title: str
 	can_write: bool
 	registration_link: str | None
+	# The last day a coupon can run to.
+	end_date: date | None
 	coupons: list[CouponItem]
 	ticket_types: list[CouponTicketType]
 	discounted: list[CurrencyAmount]

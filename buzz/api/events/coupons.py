@@ -25,9 +25,12 @@ COUPON_FIELDS = [
 	"starts_on",
 	"expires_on",
 	{"discount_amounts": ["currency", "price"]},
+	{"maximum_discount_amounts": ["currency", "price"]},
 	{"minimum_order_amounts": ["currency", "price"]},
 	{"ticket_types": ["ticket_type"]},
 ]
+
+AMOUNT_FIELDS = ["discount_amounts", "maximum_discount_amounts", "minimum_order_amounts"]
 
 
 def event_coupons(event: str) -> EventCoupons:
@@ -42,6 +45,7 @@ def event_coupons(event: str) -> EventCoupons:
 		title=doc.title,
 		can_write=perms["can_write"],
 		registration_link=registration_link(doc),
+		end_date=doc.end_date or doc.start_date,
 		coupons=[coupon_item(row, used.get(row.name, 0)) for row in rows],
 		ticket_types=coupon_ticket_types(event_id),
 		discounted=discounted,
@@ -80,17 +84,15 @@ def coupon_rows(event: str) -> list[frappe._dict]:
 		.select(price.parent, price.parentfield, price.currency, price.price)
 		.where(
 			(price.parenttype == "Buzz Coupon Code")
-			& price.parentfield.isin(["discount_amounts", "minimum_order_amounts"])
+			& price.parentfield.isin(AMOUNT_FIELDS)
 			& price.parent.isin(names)
 		)
 		.orderby(price.idx)
 	).run(as_dict=True)
-	discounts_by_parent: dict[str, list] = {}
-	minimums_by_parent: dict[str, list] = {}
+	amounts_by_field: dict[str, dict[str, list]] = {field: {} for field in AMOUNT_FIELDS}
 	for row in price_rows:
 		entry = frappe._dict(currency=row.currency, price=row.price)
-		target = discounts_by_parent if row.parentfield == "discount_amounts" else minimums_by_parent
-		target.setdefault(row.parent, []).append(entry)
+		amounts_by_field[row.parentfield].setdefault(row.parent, []).append(entry)
 
 	scope = frappe.qb.DocType("Buzz Coupon Ticket Type")
 	scope_rows = (
@@ -104,8 +106,8 @@ def coupon_rows(event: str) -> list[frappe._dict]:
 		types_by_parent.setdefault(row.parent, []).append(row)
 
 	for row in rows:
-		row["discount_amounts"] = discounts_by_parent.get(row.name, [])
-		row["minimum_order_amounts"] = minimums_by_parent.get(row.name, [])
+		for field, by_parent in amounts_by_field.items():
+			row[field] = by_parent.get(row.name, [])
 		row["ticket_types"] = types_by_parent.get(row.name, [])
 	return rows
 

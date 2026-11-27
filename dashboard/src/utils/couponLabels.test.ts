@@ -29,6 +29,7 @@ function coupon(overrides: Partial<CouponItem> = {}): CouponItem {
 		discount_type: "Percentage",
 		discount_percentage: 20,
 		discount_amounts: [],
+		maximum_discount_amounts: [],
 		applies_to_all_ticket_types: true,
 		ticket_types: [],
 		minimum_requirement: "None",
@@ -65,11 +66,11 @@ test("scope names the picked ticket types", () => {
 	assert.equal(scopeLabel(picked, ticketTypes), "Student, VIP")
 })
 
-test("status themes: active green, scheduled blue, used up amber", () => {
+test("status themes: active green, used up amber, the rest gray", () => {
 	assert.equal(statusTheme("Active"), "green")
 	assert.equal(statusTheme("Used up"), "amber")
 	assert.equal(statusTheme("Disabled"), "gray")
-	assert.equal(statusTheme("Scheduled"), "blue")
+	assert.equal(statusTheme("Scheduled"), "gray")
 })
 
 test("stats count active coupons, redemptions and the amount discounted", () => {
