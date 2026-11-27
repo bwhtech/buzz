@@ -38,7 +38,7 @@ export function useLocationPicker(team: () => string, isOpen: Ref<boolean>) {
 
 	async function savePlace(place: PlacePrediction) {
 		const name = await placeSearch.save(place, team())
-		if (name) loadVenues(team())
+		if (name) await loadVenues(team())
 		return name
 	}
 
