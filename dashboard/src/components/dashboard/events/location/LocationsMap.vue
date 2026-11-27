@@ -26,6 +26,7 @@ const props = defineProps<{
 	active: string | null
 	hovered: string | null
 	padding: MapPadding
+	readonly?: boolean
 }>()
 const emit = defineEmits<{ pick: [venue: Venue] }>()
 
@@ -150,6 +151,7 @@ onMounted(async () => {
 		style: MAP_STYLES[theme],
 		center: [78.9, 20.6],
 		zoom: 3,
+		interactive: !props.readonly,
 		// OpenStreetMap's data licence (ODbL) asks for its credit to stay in view.
 		attributionControl: { compact: false, customAttribution: OSM_ATTRIBUTION },
 	})
