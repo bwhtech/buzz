@@ -58,7 +58,7 @@ const filtered = computed(() => {
 								<button
 									type="button"
 									:class="COLUMNS"
-									class="group w-full border-b py-3 text-left transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-surface-gray-1 active:scale-[0.99] focus-visible:outline-none focus-visible:focus-ring motion-reduce:active:scale-100"
+									class="group w-full border-b py-3 text-left transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-surface-gray-1 active:scale-[0.99] focus-visible:focus-ring motion-reduce:active:scale-100"
 									@click="managing = team"
 								>
 									<div class="flex min-w-0 items-center gap-3">

@@ -43,7 +43,7 @@ function remove(name: string) {
 				<template #prefix><component :is="topicIcon(name)" class="size-3.5" /></template>
 				<template #suffix>
 					<button
-						class="relative -mr-1 grid size-4 place-items-center rounded-full text-ink-gray-5 transition-[background-color,color,transform] duration-150 ease-out before:absolute before:-inset-1 hover:bg-surface-gray-4 hover:text-ink-gray-8 focus-visible:outline-none focus-visible:focus-ring active:scale-90 motion-reduce:active:scale-100"
+						class="relative -mr-1 grid size-4 place-items-center rounded-full text-ink-gray-5 transition-[background-color,color,transform] duration-150 ease-out before:absolute before:-inset-1 hover:bg-surface-gray-4 hover:text-ink-gray-8 focus-visible:focus-ring active:scale-90 motion-reduce:active:scale-100"
 						:aria-label="__('Remove {0}', [name])"
 						@click="remove(name)"
 					>

@@ -26,7 +26,7 @@ const allPrices = (prices: TierPrice[]) => prices.map(formatPrice).join(" · ")
 <template>
 	<button
 		type="button"
-		class="grid w-full grid-cols-1 items-center gap-x-3 gap-y-2 rounded-4 border border-outline-gray-2 p-3 text-left transition-[background-color,transform] duration-150 ease-out [@media(hover:hover)]:enabled:hover:bg-surface-gray-1 enabled:active:scale-[0.99] focus-visible:outline-none focus-visible:focus-ring disabled:cursor-default motion-reduce:transform-none sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_1rem]"
+		class="grid w-full grid-cols-1 items-center gap-x-3 gap-y-2 rounded-4 border border-outline-gray-2 p-3 text-left transition-[background-color,transform] duration-150 ease-out [@media(hover:hover)]:enabled:hover:bg-surface-gray-1 enabled:active:scale-[0.99] focus-visible:focus-ring disabled:cursor-default motion-reduce:transform-none sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1.4fr)_minmax(0,1fr)_1rem]"
 		:class="{ 'opacity-60': muted }"
 		:disabled="disabled"
 	>

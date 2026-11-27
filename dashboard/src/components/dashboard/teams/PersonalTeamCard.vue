@@ -42,7 +42,7 @@ function open(event: MouseEvent) {
 <template>
 	<router-link
 		:to="team ? `/manage/communities/${team.name}` : $route.fullPath"
-		class="relative flex flex-col gap-4 overflow-hidden rounded-5 border border-outline-gray-2 p-5 transition-[background-color,border-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-outline-gray-3 hover:bg-surface-gray-1 focus-visible:outline-none focus-visible:focus-ring active:scale-[0.99] motion-reduce:active:scale-100"
+		class="relative flex flex-col gap-4 overflow-hidden rounded-5 border border-outline-gray-2 p-5 transition-[background-color,border-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-outline-gray-3 hover:bg-surface-gray-1 focus-visible:focus-ring active:scale-[0.99] motion-reduce:active:scale-100"
 		@click="open"
 	>
 		<div class="absolute inset-0" :style="pattern" aria-hidden="true" />

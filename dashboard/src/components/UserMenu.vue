@@ -178,7 +178,7 @@ const menu = computed<DropdownOptions>(() => [
 		<template #default="{ open: isOpen }">
 			<button
 				data-testid="account-menu"
-				class="flex h-12 w-full items-center gap-2 rounded-4 px-1.5 transition-[background-color,transform] duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:outline-none focus-visible:focus-ring"
+				class="flex h-12 w-full items-center gap-2 rounded-4 px-1.5 transition-[background-color,transform] duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:focus-ring"
 				:class="{ 'bg-surface-gray-2': isOpen }"
 			>
 				<Tooltip :text="session.fullName" side="right" :disabled="!isCollapsed">

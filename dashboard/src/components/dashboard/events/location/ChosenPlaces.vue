@@ -70,7 +70,7 @@ function areaOf(place: Venue) {
 			>
 				<button
 					type="button"
-					class="flex size-6 shrink-0 cursor-grab items-center justify-center rounded-4 text-ink-gray-4 hover:text-ink-gray-7 focus-visible:outline-none focus-visible:focus-ring"
+					class="flex size-6 shrink-0 cursor-grab items-center justify-center rounded-4 text-ink-gray-4 hover:text-ink-gray-7 focus-visible:focus-ring"
 					draggable="true"
 					:aria-label="`Reorder ${place.venue_name}`"
 					@dragstart="dragged = place.name"
