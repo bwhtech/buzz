@@ -1,5 +1,4 @@
 import { StorageSerializers, useEventListener, useLocalStorage } from "@vueuse/core"
-import { toast } from "frappe-ui"
 import { type Ref, watch } from "vue"
 
 import { session } from "@/data/session"
@@ -58,9 +57,9 @@ export function useFormDraft<T extends object>(key: string, form: T, baseline: R
 }
 
 /**
- * Keeps a drawer's unsaved edits in localStorage under `key`, so an accidental close or a
- * reload brings them back. A drawer warns about neither, so unlike a page the draft also
- * outlives the reload. The entry drops itself once the draft matches the baseline again.
+ * Keeps a drawer's unsaved edits in localStorage under `key`, so an accidental close (X,
+ * overlay, Escape, swipe) or a reload quietly brings them back. Cancel and a successful save
+ * call `clear`. The entry drops itself once the draft matches the baseline again.
  *
  * @param getKey - the drawer kind and record, or null to keep nothing
  */
@@ -95,11 +94,6 @@ export function useDrawerDraft<T extends object>(
 		const outcome = restoredDraft(readStored<T>(key), baseline)
 		if (outcome.status === "none") return
 		draft.value = outcome.form
-		toast.info(
-			outcome.status === "restored"
-				? "Restored your unsaved changes"
-				: "This changed elsewhere — check your restored changes before saving",
-		)
 	}
 
 	function clear() {
