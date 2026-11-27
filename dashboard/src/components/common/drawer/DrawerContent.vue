@@ -31,6 +31,21 @@ function keepOpenOnOutsideClick(event: Event) {
 	const onToast = (event.target as Element | null)?.closest?.("[data-sonner-toaster]")
 	if (onToast || !props.closeOnOutsideClick) event.preventDefault()
 }
+
+const FIELD_SELECTOR =
+	"input:not([type=hidden],[type=checkbox],[type=radio],[disabled]), textarea:not([disabled]), [contenteditable=true]"
+
+// Opens on the first field rather than the close button, so a form drawer can be typed into
+// straight away; a drawer with no field keeps reka's default.
+function focusFirstField(event: Event) {
+	const drawer = event.currentTarget as HTMLElement
+	const field = [...drawer.querySelectorAll<HTMLElement>(FIELD_SELECTOR)].find((element) =>
+		element.checkVisibility(),
+	)
+	if (!field) return
+	event.preventDefault()
+	field.focus({ preventScroll: true })
+}
 </script>
 
 <template>
@@ -59,6 +74,7 @@ function keepOpenOnOutsideClick(event: Event) {
 			:data-size="size"
 			class="drawer bg-surface-elevation-2 shadow-2xl"
 			@interact-outside="keepOpenOnOutsideClick"
+			@open-auto-focus="focusFirstField"
 		>
 			<DrawerHandle
 				v-if="showSwipeHandle"
@@ -96,17 +112,15 @@ function keepOpenOnOutsideClick(event: Event) {
 	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
+/* Never switched off while swiping: the name coming back on release would replay the
+   entrance, and the drawer would jump off screen and slide back in. Once it has run the
+   animation holds no transform, so the drag still follows the pointer. */
 .drawer[data-state="open"] {
 	animation: drawer-in 320ms var(--ease-out);
 }
 /* Fast where the system responds, slower where the user was deciding. */
 .drawer[data-state="closed"] {
 	animation: drawer-out 200ms var(--ease-out) forwards;
-}
-
-/* Following the finger has to be instant, or the drawer lags behind the drag. */
-.drawer[data-swiping] {
-	animation: none;
 }
 
 @keyframes drawer-in {
