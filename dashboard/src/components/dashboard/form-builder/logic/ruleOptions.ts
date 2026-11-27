@@ -1,7 +1,7 @@
 import type { Condition, LogicRule } from "@/utils/formLogic"
 
-import { CHOICE_TYPES, fieldType } from "../fieldTypes.ts"
-import type { DoctypeField, FormQuestion } from "../useFormBuilder.ts"
+import { CHOICE_TYPES, fieldType } from "../fieldTypes"
+import type { DoctypeField, FormQuestion } from "../useFormBuilder"
 
 export interface RuleField {
 	fieldname: string
@@ -80,11 +80,7 @@ function valuesOf(
 	return null
 }
 
-// A link with no choices to pick from can't be tested.
-const isTestable = (field: DoctypeField) =>
-	field.fieldtype !== "Link" || Boolean(field.link_options?.length)
-
-// What a condition may test: the doctype's own fields, then questions above the rule's targets.
+// What a condition may test: the doctype's own fields (a link with no choices to pick from is skipped), then questions above the rule's targets.
 export function ruleFields(
 	doctypeFields: DoctypeField[],
 	questions: FormQuestion[],
@@ -92,7 +88,7 @@ export function ruleFields(
 ): RuleField[] {
 	const standard = doctypeFields
 		.filter((field) => fieldType(field.fieldtype).group !== "Layout")
-		.filter(isTestable)
+		.filter((field) => field.fieldtype !== "Link" || field.link_options)
 		.map((field) => ({
 			fieldname: field.fieldname,
 			label: field.label,

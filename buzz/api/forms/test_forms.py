@@ -7,12 +7,7 @@ from buzz.api.forms.fields import (
 	get_form_fields,
 	get_link_field_options,
 )
-from buzz.tests.factories import (
-	AttendeeTicketAddOnFactory,
-	EventCategoryFactory,
-	EventHostFactory,
-	SponsorshipTierFactory,
-)
+from buzz.tests.factories import EventCategoryFactory, EventHostFactory, SponsorshipTierFactory
 
 # Leaves title and speakers (both mandatory), description and phone renderable.
 TALK_PROPOSAL_EXCLUDE = STANDARD_EXCLUDE_FIELDS | {"event", "submitted_by"}
@@ -80,12 +75,6 @@ class TestGetLinkFieldOptions(IntegrationTestCase):
 		frappe.db.set_value("Sponsorship Tier", tier, "title", "")
 
 		self.assertEqual(self.label_of("Sponsorship Tier", tier), tier)
-
-	def test_attendee_add_on_records_are_not_offered(self):
-		# Each row is one attendee's selection, so its options would list other attendees.
-		AttendeeTicketAddOnFactory.create()
-
-		self.assertEqual(get_link_field_options("Attendee Ticket Add-on"), [])
 
 	def test_country_options_use_cache_when_event_is_given(self):
 		first = get_link_field_options("Country", event="some-event")

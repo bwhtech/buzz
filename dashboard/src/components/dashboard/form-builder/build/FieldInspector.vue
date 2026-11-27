@@ -116,8 +116,7 @@ const ruleFieldsAbove = computed(() =>
 			<FormControl
 				v-if="takesPlaceholder && !question.is_standard"
 				v-model="question.placeholder"
-				label="Hint inside the box"
-				placeholder="Shown in the empty field, e.g. Your company name"
+				label="Placeholder"
 			/>
 			<div v-if="fieldtype === 'Paragraph'" class="flex flex-col gap-1.5">
 				<span class="text-xs text-ink-gray-5">Text</span>
