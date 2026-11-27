@@ -44,7 +44,7 @@ const goBack = () => (window.history.state?.back ? router.back() : goToEvents())
 	>
 		<button
 			aria-label="Go back"
-			class="group flex h-12 w-full items-center gap-1.5 rounded-4 px-1 transition duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:focus-ring"
+			class="group flex h-12 w-full items-center gap-1.5 rounded-4 px-1 transition duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:outline-none focus-visible:focus-ring"
 			@click="goBack"
 		>
 			<span
@@ -66,7 +66,7 @@ const goBack = () => (window.history.state?.back ? router.back() : goToEvents())
 	>
 		<router-link
 			to="/manage"
-			class="flex h-12 w-full items-center gap-2 rounded-4 px-1.5 transition-[background-color,transform] duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:focus-ring"
+			class="flex h-12 w-full items-center gap-2 rounded-4 px-1.5 transition-[background-color,transform] duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:outline-none focus-visible:focus-ring"
 		>
 			<template v-if="isWhitelabel && !isCollapsed && brand">
 				<img
@@ -92,7 +92,7 @@ const goBack = () => (window.history.state?.back ? router.back() : goToEvents())
 	<Tooltip v-else class="w-full" :text="workspace.back.label" side="right" :disabled="!isCollapsed">
 		<button
 			:aria-label="workspace.back.label"
-			class="group flex h-12 w-full items-center gap-1.5 rounded-4 px-1 transition duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:focus-ring"
+			class="group flex h-12 w-full items-center gap-1.5 rounded-4 px-1 transition duration-150 ease-out hover:bg-surface-gray-2 active:scale-[0.98] focus-visible:outline-none focus-visible:focus-ring"
 			@click="router.push(workspace.back.to)"
 		>
 			<span
