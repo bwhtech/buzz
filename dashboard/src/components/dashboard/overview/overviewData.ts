@@ -78,7 +78,12 @@ export function useEventOverview(eventId: string) {
 	const summary = computed(() => summarise(doc.value, venue.doc))
 	const metrics = computed(() => buildMetrics(registrations.data, proposals.data, ticketing.data))
 	const metricsLoaded = computed(() => settled(registrations) && settled(proposals))
-	return { summary, steps, metrics, metricsLoaded }
+	// Held until the venue's name is in, so the hero never shows the venue's id.
+	const heroLoaded = computed(() =>
+		Boolean(doc.value && (!doc.value.venue || venue.doc || venue.error)),
+	)
+	const stepsLoaded = computed(() => Boolean(facts.value))
+	return { summary, steps, metrics, heroLoaded, stepsLoaded, metricsLoaded }
 }
 
 function summarise(doc: OverviewEventDoc | null, venue: VenueDoc | null): EventSummary {

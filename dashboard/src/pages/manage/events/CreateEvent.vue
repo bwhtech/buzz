@@ -174,6 +174,8 @@ async function save() {
 
 	submitting.value = true
 	failed.value = false
+	// The Overview's code downloads while the steps play, so landing on it doesn't wait.
+	void import("@/pages/manage/events/EventOverview.vue")
 	// Steps and save run together: whichever finishes first waits for the other. Settled,
 	// not all: the panel reads the recorded error, whether or not the save also rejects.
 	await Promise.allSettled([
