@@ -29,8 +29,10 @@ class TestTokenScope(McpTestCase):
 				self.assertEqual(self.get(path, self.mcp_token).status_code, 403)
 
 	def test_cmd_cannot_ride_on_the_mcp_path(self):
+		# Frappe 16 runs `cmd` and the auth hook refuses it; develop drops a client's `cmd`.
 		response = self.get(f"{ENDPOINT}?cmd=frappe.auth.get_logged_user", self.mcp_token)
-		self.assertEqual(response.status_code, 403)
+		self.assertNotEqual(response.status_code, 200)
+		self.assertNotIn(self.user, response.get_data(as_text=True))
 
 	def test_tokens_of_registered_apps_are_not_confined(self):
 		client = OAuthClientFactory.create().name
