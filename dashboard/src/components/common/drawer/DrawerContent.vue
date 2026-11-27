@@ -96,17 +96,15 @@ function keepOpenOnOutsideClick(event: Event) {
 	--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
+/* Never switched off while swiping: the name coming back on release would replay the
+   entrance, and the drawer would jump off screen and slide back in. Once it has run the
+   animation holds no transform, so the drag still follows the pointer. */
 .drawer[data-state="open"] {
 	animation: drawer-in 320ms var(--ease-out);
 }
 /* Fast where the system responds, slower where the user was deciding. */
 .drawer[data-state="closed"] {
 	animation: drawer-out 200ms var(--ease-out) forwards;
-}
-
-/* Following the finger has to be instant, or the drawer lags behind the drag. */
-.drawer[data-swiping] {
-	animation: none;
 }
 
 @keyframes drawer-in {

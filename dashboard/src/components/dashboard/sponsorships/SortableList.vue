@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="Item">
+import { Button } from "frappe-ui"
 import { nextTick, ref } from "vue"
 
 const items = defineModel<Item[]>({ required: true })
@@ -64,42 +65,35 @@ async function moveWithArrowKeys(event: KeyboardEvent, index: number) {
 				@dragover.prevent
 				@drop="dropAt(index)"
 			>
-				<button
-					type="button"
-					class="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-4 text-ink-gray-4 hover:text-ink-gray-7 focus-visible:outline-none focus-visible:focus-ring disabled:cursor-default disabled:opacity-0"
+				<Button
+					variant="ghost"
+					icon="lucide-grip-vertical"
+					class="cursor-grab disabled:invisible"
 					:draggable="!disabled"
 					:disabled="disabled"
-					:aria-label="`Reorder ${itemName} ${index + 1}`"
+					:label="`Reorder ${itemName} ${index + 1}`"
 					@dragstart="draggedIndex = index"
 					@dragend="draggedIndex = null"
 					@keydown="moveWithArrowKeys($event, index)"
-				>
-					<span class="lucide-grip-vertical size-4" aria-hidden="true" />
-				</button>
+				/>
 				<slot name="row" :item="item" :index="index" :add="addItem" />
-				<button
+				<Button
 					v-if="!disabled && items.length > minRows && !isLocked(item)"
-					type="button"
-					class="flex size-7 shrink-0 items-center justify-center rounded-4 text-ink-gray-4 transition-opacity hover:text-ink-gray-7 focus-visible:opacity-100 focus-visible:outline-none focus-visible:focus-ring group-hover:opacity-100 [@media(hover:hover)]:opacity-0"
-					:aria-label="`Remove ${itemName} ${index + 1}`"
+					variant="ghost"
+					icon="lucide-x"
+					:label="`Remove ${itemName} ${index + 1}`"
 					@click="removeItem(index)"
-				>
-					<span class="lucide-x size-4" aria-hidden="true" />
-				</button>
+				/>
 				<!-- Holds the remove button's width so every row's fields line up. -->
 				<span v-else-if="!disabled" class="size-7 shrink-0" aria-hidden="true" />
 			</li>
 		</ul>
-		<button
+		<Button
 			v-if="!disabled"
-			type="button"
-			class="flex items-center gap-1 rounded-4 py-1 text-base text-ink-gray-5 hover:text-ink-gray-8 focus-visible:outline-none focus-visible:focus-ring"
+			variant="ghost"
+			icon-left="lucide-plus"
+			:label="addLabel"
 			@click="addItem"
-		>
-			<span class="flex size-7 items-center justify-center">
-				<span class="lucide-plus size-4" aria-hidden="true" />
-			</span>
-			{{ addLabel }}
-		</button>
+		/>
 	</div>
 </template>

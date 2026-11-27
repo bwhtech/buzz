@@ -4,6 +4,7 @@ import { computed, ref, watch } from "vue"
 
 import EnabledAlert from "@/components/dashboard/EnabledAlert.vue"
 import SponsorshipDrawer from "@/components/dashboard/sponsorships/SponsorshipDrawer.vue"
+import { useDrawerDraft } from "@/composables/useFormDraft"
 import { useEnabledCurrencies } from "@/data/currencies"
 import type { AddOnItem, TicketTypeItem } from "@/types"
 import { formatWholePriceOrFree } from "@/utils/currency"
@@ -57,9 +58,24 @@ function defaultCurrency() {
 	return names.includes(DEFAULT_CURRENCY) ? DEFAULT_CURRENCY : (names[0] ?? DEFAULT_CURRENCY)
 }
 
+const baselineValues = () =>
+	props.addOn ? addOnValuesOf(props.addOn) : blankAddOnValues(defaultCurrency())
+
+const storedDraft = useDrawerDraft(
+	() => open.value && (props.addOn ? `add-on:${props.addOn.name}` : `add-on:new:${props.event}`),
+	draft,
+	baselineValues,
+)
+
+function closeAndDiscard() {
+	storedDraft.clear()
+	open.value = false
+}
+
 watch(open, (opened) => {
 	if (!opened) return
-	draft.value = props.addOn ? addOnValuesOf(props.addOn) : blankAddOnValues(defaultCurrency())
+	draft.value = baselineValues()
+	storedDraft.restore()
 	showValidationError.value = false
 	serverError.value = ""
 	creator.reset()
@@ -86,7 +102,7 @@ async function save() {
 	}
 	toast.success(isNew.value ? "Add-on added" : "Add-on updated")
 	emit("changed")
-	open.value = false
+	closeAndDiscard()
 }
 </script>
 
@@ -114,7 +130,7 @@ async function save() {
 			<div class="flex w-full flex-wrap items-center justify-end gap-x-4 gap-y-2">
 				<ErrorMessage class="text-right" :message="shownError ?? undefined" />
 				<div class="flex justify-end gap-2 max-sm:w-full max-sm:[&>*]:flex-1">
-					<Button size="md" label="Cancel" @click="open = false" />
+					<Button size="md" label="Cancel" @click="closeAndDiscard" />
 					<Button
 						size="md"
 						variant="solid"

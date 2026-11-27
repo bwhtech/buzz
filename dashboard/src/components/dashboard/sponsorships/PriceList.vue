@@ -71,7 +71,7 @@ function updatePrice(index: number, values: Partial<TierPrice>) {
 						<p class="max-w-64 text-p-xs">{{ lockedMessage }}</p>
 					</template>
 					<div
-						class="grid min-w-0 flex-1 grid-cols-[2fr_1fr] gap-2 rounded-4 focus-visible:outline-none focus-visible:focus-ring"
+						class="grid min-w-0 flex-1 grid-cols-[2fr_1fr] gap-2 rounded-4"
 						:tabindex="isLocked(item) ? 0 : undefined"
 						:class="{ 'cursor-not-allowed [&_*]:!cursor-not-allowed': isLocked(item) }"
 					>

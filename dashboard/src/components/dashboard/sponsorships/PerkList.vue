@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { TextInput } from "frappe-ui"
+
 import SortableList from "@/components/dashboard/sponsorships/SortableList.vue"
 
 const perks = defineModel<string[]>({ required: true })
@@ -28,14 +30,13 @@ function updatePerk(index: number, value: string) {
 		:disabled="disabled"
 	>
 		<template #row="{ item, index, add }">
-			<input
-				:value="item"
-				type="text"
+			<TextInput
+				:model-value="item"
+				class="min-w-0 flex-1"
 				:placeholder="placeholder"
 				:aria-label="itemName"
 				:disabled="disabled"
-				class="min-w-0 flex-1 border-0 bg-transparent px-1 py-1.5 text-base text-ink-gray-8 placeholder:text-ink-gray-4 focus:outline-none focus:ring-0"
-				@input="updatePerk(index, ($event.target as HTMLInputElement).value)"
+				@update:model-value="updatePerk(index, $event)"
 				@keydown.enter.prevent="add"
 			/>
 		</template>

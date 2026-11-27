@@ -12,6 +12,7 @@ import {
 } from "@/components/common/drawer"
 import EnabledAlert from "@/components/dashboard/EnabledAlert.vue"
 import { keepLastValue } from "@/components/dashboard/sponsorships/helpers"
+import { useDrawerDraft } from "@/composables/useFormDraft"
 import { useIsMobile } from "@/composables/useIsMobile"
 import type { CouponItem, CouponTicketType } from "@/types"
 import { CouponAvailability } from "@/utils/couponAvailability"
@@ -84,12 +85,20 @@ function startingType() {
 }
 
 // A fresh copy each time: sharing savedValues' object would let edits change it too.
-const resetDraft = () =>
-	(draft.value = props.coupon ? couponValuesOf(props.coupon) : blankCouponValues(startingType()))
+const baselineValues = () =>
+	props.coupon ? couponValuesOf(props.coupon) : blankCouponValues(startingType())
+const resetDraft = () => (draft.value = baselineValues())
+
+const storedDraft = useDrawerDraft(
+	() => open.value && (props.coupon ? `coupon:${props.coupon.name}` : `coupon:new:${props.event}`),
+	draft,
+	baselineValues,
+)
 
 watch(open, (opened) => {
 	if (!opened) return
 	resetDraft()
+	storedDraft.restore()
 	showValidationError.value = false
 	step.value = isNew.value ? 1 : 2
 })
@@ -161,6 +170,7 @@ async function create() {
 	}
 	toast.success("Coupon created")
 	emit("changed")
+	storedDraft.clear()
 	open.value = false
 }
 
@@ -178,6 +188,7 @@ async function saveChanges() {
 		return
 	}
 	toast.success("Coupon updated")
+	storedDraft.clear()
 	emit("changed")
 }
 
@@ -186,7 +197,12 @@ function goBack() {
 	if (step.value === 2 && isNew.value) step.value = 1
 	else if (step.value === 1 && !isNew.value) step.value = 2
 	else if (hasChanges.value) resetDraft()
-	else open.value = false
+	else closeAndDiscard()
+}
+
+function closeAndDiscard() {
+	storedDraft.clear()
+	open.value = false
 }
 </script>
 

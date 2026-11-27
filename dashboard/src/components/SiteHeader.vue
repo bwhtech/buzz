@@ -94,7 +94,7 @@ const mobileOptions = computed((): DropdownOptions => {
 			<a
 				v-if="navbar?.call_to_action && navbar.call_to_action_url"
 				:href="navbar.call_to_action_url"
-				class="inline-flex h-8 items-center rounded-4 bg-surface-gray-10 px-2.5 text-base-medium text-ink-base transition-colors hover:bg-surface-gray-9 active:bg-surface-gray-8 focus-visible:outline-none focus-visible:focus-ring"
+				class="inline-flex h-8 items-center rounded-4 bg-surface-gray-10 px-2.5 text-base-medium text-ink-base transition-colors hover:bg-surface-gray-9 active:bg-surface-gray-8"
 			>
 				{{ __(navbar.call_to_action) }}
 			</a>
@@ -111,7 +111,7 @@ const mobileOptions = computed((): DropdownOptions => {
 			<Dropdown v-if="session.isLoggedIn" :options="accountMenu" align="end">
 				<button
 					type="button"
-					class="rounded-full transition-transform duration-150 ease-out active:scale-[0.97] focus-visible:outline-none focus-visible:focus-ring motion-reduce:transition-none"
+					class="rounded-full transition-transform duration-150 ease-out active:scale-[0.97] motion-reduce:transition-none"
 					:aria-label="__('Account menu')"
 				>
 					<Avatar :image="session.userImage ?? undefined" :label="session.fullName" size="lg" />
@@ -130,7 +130,7 @@ const mobileOptions = computed((): DropdownOptions => {
 				<button
 					v-if="session.isLoggedIn"
 					type="button"
-					class="rounded-full focus-visible:outline-none focus-visible:focus-ring"
+					class="rounded-full"
 					:aria-label="__('Menu')"
 				>
 					<Avatar :image="session.userImage ?? undefined" :label="session.fullName" size="lg" />

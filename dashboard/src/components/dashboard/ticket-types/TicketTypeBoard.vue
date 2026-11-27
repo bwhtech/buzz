@@ -89,7 +89,7 @@ const edgeMask = computed(() => {
 					v-for="ticketType in group.ticketTypes"
 					:key="ticketType.name"
 					type="button"
-					class="flex flex-col gap-2.5 rounded-4 border border-outline-gray-2 bg-surface-elevation-2 p-3 text-left transition-[border-color,opacity,transform] duration-150 ease-out focus-visible:outline-none focus-visible:focus-ring enabled:active:scale-[0.98] [@media(hover:hover)]:enabled:hover:border-outline-gray-3 motion-reduce:transform-none"
+					class="flex flex-col gap-2.5 rounded-4 border border-outline-gray-2 bg-surface-elevation-2 p-3 text-left transition-[border-color,opacity,transform] duration-150 ease-out enabled:active:scale-[0.98] [@media(hover:hover)]:enabled:hover:border-outline-gray-3 motion-reduce:transform-none"
 					:class="
 						organizer.dragging.value === ticketType.name
 							? 'opacity-40'
@@ -137,7 +137,7 @@ const edgeMask = computed(() => {
 			<button
 				v-if="!group.ticketTypes.length && canWrite && !organizer.dragging.value"
 				type="button"
-				class="flex h-[4.5rem] items-center justify-center gap-1.5 rounded-4 border border-dashed border-outline-gray-3 text-sm text-ink-gray-6 transition-[border-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] [@media(hover:hover)]:hover:border-outline-gray-4 [@media(hover:hover)]:hover:text-ink-gray-8 focus-visible:outline-none focus-visible:focus-ring active:scale-[0.98] motion-reduce:transform-none"
+				class="flex h-[4.5rem] items-center justify-center gap-1.5 rounded-4 border border-dashed border-outline-gray-3 text-sm text-ink-gray-6 transition-[border-color,color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] [@media(hover:hover)]:hover:border-outline-gray-4 [@media(hover:hover)]:hover:text-ink-gray-8 active:scale-[0.98] motion-reduce:transform-none"
 				@click="$emit('add', group.key)"
 			>
 				<Icon icon="lucide-plus" class="size-4" aria-hidden="true" />

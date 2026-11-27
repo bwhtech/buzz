@@ -98,7 +98,7 @@ async function submit() {
 					<div class="space-y-2">
 						<button
 							type="button"
-							class="relative block w-full rounded-4 focus-visible:outline-none focus-visible:focus-ring"
+							class="relative block w-full rounded-4"
 							:aria-label="logo ? 'Change sponsor logo' : 'Upload sponsor logo'"
 							@click="openFileSelector"
 						>

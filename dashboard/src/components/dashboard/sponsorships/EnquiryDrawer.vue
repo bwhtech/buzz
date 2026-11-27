@@ -226,7 +226,7 @@ const updatedAt = computed(() => (loaded.value ? dayjsLocal(loaded.value.modifie
 								>
 									<AccordionHeader>
 										<AccordionTrigger
-											class="group flex w-full items-center justify-between gap-2 py-2.5 text-left text-base text-ink-gray-8 focus-visible:outline-none focus-visible:focus-ring"
+											class="group flex w-full items-center justify-between gap-2 py-2.5 text-left text-base text-ink-gray-8"
 										>
 											{{ answer.label }}
 											<span

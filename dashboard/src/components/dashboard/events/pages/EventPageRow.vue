@@ -70,7 +70,7 @@ const actions = computed(() => [
 	<div class="flex min-w-0 flex-1 cursor-pointer items-center gap-3">
 		<button
 			type="button"
-			class="flex min-w-0 flex-1 items-center gap-3 rounded-3 text-left transition-opacity focus-visible:outline-none focus-visible:focus-ring"
+			class="flex min-w-0 flex-1 items-center gap-3 rounded-3 text-left transition-opacity"
 			:class="{ 'opacity-50': !published }"
 			:aria-label="__('Edit {0}', [page.title])"
 		>

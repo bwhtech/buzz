@@ -31,7 +31,7 @@ const checked = computed(() => allowed.value.filter((zone) => zone.checked_in_at
 			<li v-for="zone in allowed" :key="zone.name">
 				<button
 					type="button"
-					class="zone-row flex w-full items-center gap-3 px-3.5 py-3 text-left focus-visible:focus-ring focus-visible:outline-none disabled:cursor-wait"
+					class="zone-row flex w-full items-center gap-3 px-3.5 py-3 text-left disabled:cursor-wait"
 					:aria-pressed="Boolean(zone.checked_in_at)"
 					:aria-label="`${zone.checked_in_at ? 'Undo check-in at' : 'Check in at'} ${zone.title}`"
 					:disabled="pendingZone !== null"

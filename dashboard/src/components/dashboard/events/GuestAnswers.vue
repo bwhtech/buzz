@@ -13,7 +13,7 @@ defineProps<{ answers: GuestAnswer[] }>()
 		class="overflow-hidden rounded-5 border border-outline-gray-2"
 	>
 		<CollapsibleTrigger
-			class="answers-trigger flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-gray-1 focus-visible:focus-ring focus-visible:outline-none"
+			class="answers-trigger flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-surface-gray-1"
 		>
 			<span
 				class="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-gray-2 text-ink-gray-6"
