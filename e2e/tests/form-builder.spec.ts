@@ -182,7 +182,7 @@ test("registration edits attendee and booking questions, with ticket-type chips"
 	await page.getByRole("radio", { name: "Logic" }).click()
 	await expect(page.getByRole("button", { name: "Seat preference" })).toBeVisible()
 
-	await page.getByRole("radio", { name: "Build" }).click()
+	await page.getByRole("radio", { name: "Questions" }).click()
 	await rail.getByRole("button", { name: /^Billing/ }).click()
 	for (const label of ["Full name", "Email", "Phone"]) {
 		await expect(page.getByLabel(new RegExp(`: ${label}$`))).toBeVisible()
@@ -256,6 +256,6 @@ test("event settings list the feedback form and open it in the builder", async (
 	await page.goto(`/b/manage/events/${event.name}/settings`)
 	await expect(page.getByRole("heading", { name: "Forms" })).toBeVisible()
 	await page.getByRole("link", { name: "Edit" }).first().click()
-	await expect(page.getByRole("radio", { name: "Build" })).toBeVisible()
+	await expect(page.getByRole("radio", { name: "Questions" })).toBeVisible()
 	await expect(page.getByRole("link", { name: "Back to Settings" })).toBeVisible()
 })
