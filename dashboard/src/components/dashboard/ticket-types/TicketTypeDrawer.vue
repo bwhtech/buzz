@@ -62,6 +62,7 @@ const { draft, hasChanges, discardChanges, confirmAndSave } = useDrawerEdits<Tic
 		message: "Changes show on the booking page right away.",
 		success: "Ticket type updated",
 	},
+	() => props.ticketType && `ticket-type:${props.ticketType.name}`,
 )
 
 const isInvalid = computed(() => !!ticketTypeError(draft.value))
