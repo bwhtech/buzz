@@ -39,7 +39,7 @@ const openStreetMapUrl = computed(() => {
 	return `https://www.openstreetmap.org/export/embed.html?${search}`
 })
 
-const url = computed(() => googleUrl.value || props.embedUrl || openStreetMapUrl.value)
+const url = computed(() => openStreetMapUrl.value || googleUrl.value || props.embedUrl)
 
 watch(url, () => {
 	isLoaded.value = false

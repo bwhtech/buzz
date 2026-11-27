@@ -150,11 +150,16 @@ export function scheduleLabels(schedule: ScheduleDraft) {
 	const endDateLabel = computed(() =>
 		schedule.endDate === schedule.startDate ? "Same day" : formatDateLabel(schedule.endDate),
 	)
-	const lengthLabel = computed(() => formatDuration(scheduleLength(schedule)))
-	const summaryLine = computed(() => {
-		const end =
-			schedule.endDate === schedule.startDate ? "" : `${formatDateLabel(schedule.endDate)}, `
-		return `${formatDateLabel(schedule.startDate)}, ${formatTime(schedule.startTime)} → ${end}${formatTime(schedule.endTime)}`
+	// A multi-day event has no single length worth showing: it is not continuous.
+	const lengthLabel = computed(() =>
+		schedule.endDate === schedule.startDate ? formatDuration(scheduleLength(schedule)) : "",
+	)
+	const summaryLines = computed(() => {
+		const start = `${formatDateLabel(schedule.startDate)} · ${formatTime(schedule.startTime)}`
+		if (schedule.endDate === schedule.startDate)
+			return [`${start} → ${formatTime(schedule.endTime)}`]
+		const end = `${formatDateLabel(schedule.endDate)} · ${formatTime(schedule.endTime)}`
+		return [`Starts ${start}`, `Ends ${end}`]
 	})
-	return { endDateLabel, lengthLabel, summaryLine }
+	return { endDateLabel, lengthLabel, summaryLines }
 }
