@@ -76,6 +76,15 @@ class BuzzCouponCode(Document):
 	def validate_schedule(self):
 		if self.starts_on and self.expires_on and getdate(self.starts_on) > getdate(self.expires_on):
 			frappe.throw(_("The coupon can't start after it expires"))
+		# Checked only when set, so a moved event doesn't block other edits.
+		if self.expires_on and self.has_value_changed("expires_on"):
+			self.validate_expiry_within_event()
+
+	def validate_expiry_within_event(self):
+		event = frappe.get_cached_doc("Buzz Event", str(self.event))
+		event_end = event.end_date or event.start_date
+		if event_end and getdate(self.expires_on) > getdate(event_end):
+			frappe.throw(_("The coupon can't expire after the event ends"))
 
 	def validate_unique_code(self):
 		filters = {"event": self.event, "code": self.code, "name": ["!=", self.name]}

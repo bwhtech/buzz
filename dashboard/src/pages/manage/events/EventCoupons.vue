@@ -246,6 +246,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 		:coupon="selectedCoupon"
 		:new-coupon-type="newCouponType ?? (filter === 'all' ? undefined : filter)"
 		:ticket-types="page.data?.ticket_types ?? []"
+		:event-end-date="page.data?.end_date ?? null"
 		:can-write="!!page.data?.can_write"
 		@changed="page.reload()"
 	/>

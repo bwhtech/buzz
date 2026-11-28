@@ -37,6 +37,7 @@ const props = defineProps<{
 	// The type a new coupon starts on.
 	newCouponType?: CouponValues["coupon_type"]
 	ticketTypes: CouponTicketType[]
+	eventEndDate: string | null
 	canWrite: boolean
 }>()
 const open = defineModel<boolean>("open", { required: true })
@@ -276,7 +277,12 @@ function goBack() {
 									<span class="flex-1 text-sm text-ink-gray-8">{{ typeSummary }}</span>
 									<Button v-if="canChangeType" variant="ghost" label="Change" @click="step = 1" />
 								</div>
-								<CouponForm v-model="draft" :ticket-types="ticketTypes" :disabled="!canWrite" />
+								<CouponForm
+									v-model="draft"
+									:ticket-types="ticketTypes"
+									:event-end-date="eventEndDate"
+									:disabled="!canWrite"
+								/>
 							</div>
 						</Transition>
 					</div>

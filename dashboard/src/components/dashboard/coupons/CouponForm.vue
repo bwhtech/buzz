@@ -21,7 +21,11 @@ import CouponLimits from "./CouponLimits.vue"
 import CurrencyAmounts from "./CurrencyAmounts.vue"
 
 const values = defineModel<CouponValues>({ required: true })
-const props = defineProps<{ ticketTypes: CouponTicketType[]; disabled?: boolean }>()
+const props = defineProps<{
+	ticketTypes: CouponTicketType[]
+	eventEndDate?: string | null
+	disabled?: boolean
+}>()
 
 const eventId = useRoute().params.eventId as string
 
@@ -98,8 +102,8 @@ const hasInvalidCode = computed(
 					/>
 					<Button
 						variant="subtle"
-						icon-left="lucide-shuffle"
-						label="Generate"
+						icon-left="lucide-dices"
+						label="Random"
 						:disabled="disabled"
 						@click="values.code = generateCode()"
 					/>
@@ -177,7 +181,12 @@ const hasInvalidCode = computed(
 			</div>
 		</DrawerSection>
 
-		<CouponLimits v-model="values" :min-date="today" :disabled="disabled" />
+		<CouponLimits
+			v-model="values"
+			:min-date="today"
+			:max-date="eventEndDate ?? undefined"
+			:disabled="disabled"
+		/>
 
 		<DrawerSection
 			title="Eligibility"

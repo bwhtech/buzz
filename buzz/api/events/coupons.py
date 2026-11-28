@@ -42,6 +42,7 @@ def event_coupons(event: str) -> EventCoupons:
 		title=doc.title,
 		can_write=perms["can_write"],
 		registration_link=registration_link(doc),
+		end_date=doc.end_date or doc.start_date,
 		coupons=[coupon_item(row, used.get(row.name, 0)) for row in rows],
 		ticket_types=coupon_ticket_types(event_id),
 		discounted=discounted,

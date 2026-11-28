@@ -56,6 +56,24 @@ class TestCouponValidation(CouponTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			self.create_coupon(starts_on=add_days(today(), 5), expires_on=add_days(today(), 2))
 
+	def test_expiry_after_event_end_rejected(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.create_coupon(expires_on=add_days(self.event.end_date, 1))
+
+	def test_expiry_on_event_end_allowed(self):
+		coupon = self.create_coupon(expires_on=self.event.end_date)
+
+		self.assertEqual(str(coupon.expires_on), str(self.event.end_date))
+
+	def test_expiry_past_a_moved_event_end_still_saves_other_changes(self):
+		event = BuzzEventFactory.create()
+		coupon = BuzzCouponCodeFactory.create(event=event.name, expires_on=event.end_date)
+		frappe.db.set_value("Buzz Event", event.name, "end_date", add_days(event.end_date, -1))
+		frappe.clear_document_cache("Buzz Event", event.name)
+
+		coupon.enabled = 0
+		coupon.save()
+
 	def test_percentage_must_be_above_zero(self):
 		with self.assertRaises(frappe.ValidationError):
 			self.create_coupon(discount_percentage=0)

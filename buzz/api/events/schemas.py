@@ -359,6 +359,8 @@ class EventCoupons(APIResponse):
 	title: str
 	can_write: bool
 	registration_link: str | None
+	# The last day a coupon can run to.
+	end_date: date | None
 	coupons: list[CouponItem]
 	ticket_types: list[CouponTicketType]
 	discounted: list[CurrencyAmount]

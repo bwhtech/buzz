@@ -1019,6 +1019,8 @@ export interface EventCoupons {
 	title: string
 	can_write: boolean
 	registration_link: string | null
+	/** The last day a coupon can run to. */
+	end_date: string | null
 	coupons: CouponItem[]
 	ticket_types: CouponTicketType[]
 	discounted: { currency: string; amount: number }[]
