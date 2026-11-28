@@ -7,6 +7,7 @@ import type { DiscountQuote } from "@/types"
 import { formatCurrency } from "@/utils/currency"
 import { serverErrorMessage } from "@/utils/serverError"
 
+import { selectedAddOns } from "./addOnScope"
 import type { PricingInputs } from "./useOrderPricing"
 
 /** Server-side discount for the picked tickets: the best automatic coupon or the applied promo code. */
@@ -33,9 +34,15 @@ export function useDiscountQuote(inputs: PricingInputs, netAmount: Ref<number>) 
 		netAmount.value > 0 ? (quote.value?.discount_amount ?? 0) : 0,
 	)
 
-	const ticketMix = computed(() =>
+	const cartAddOns = computed(() =>
+		attendees.value.map((attendee) =>
+			selectedAddOns(attendee, inputs.addOnsMap.value).map(([addOn]) => addOn.name),
+		),
+	)
+
+	const cartMix = computed(() =>
 		attendees.value
-			.map((attendee) => String(attendee.ticket_type))
+			.map((attendee, index) => [attendee.ticket_type, ...cartAddOns.value[index]].join("+"))
 			.toSorted()
 			.join(","),
 	)
@@ -48,6 +55,7 @@ export function useDiscountQuote(inputs: PricingInputs, netAmount: Ref<number>) 
 					event: inputs.eventId.value,
 					currency: currency.value,
 					ticket_types: attendees.value.map((attendee) => String(attendee.ticket_type)),
+					add_ons: cartAddOns.value,
 					coupon_code: couponCode || null,
 					buyer_email: email || null,
 				},
@@ -99,7 +107,7 @@ export function useDiscountQuote(inputs: PricingInputs, netAmount: Ref<number>) 
 		quote.value = result ?? quote.value
 	}
 
-	watchDebounced([ticketMix, currency, appliedCode, () => inputs.guestEmail()], refreshQuote, {
+	watchDebounced([cartMix, currency, appliedCode, () => inputs.guestEmail()], refreshQuote, {
 		debounce: 300,
 	})
 
