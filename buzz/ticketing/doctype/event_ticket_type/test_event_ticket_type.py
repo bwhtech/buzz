@@ -86,7 +86,14 @@ class TestHiddenTicketTypes(IntegrationTestCase):
 		with self.assertRaises(frappe.ValidationError):
 			self.public.save()
 
-	def test_unpublishing_the_last_public_ticket_type_is_allowed_without_hidden_ones(self):
+	def test_unpublishing_the_last_published_ticket_type_is_refused(self):
+		self.public.is_published = 0
+
+		with self.assertRaisesRegex(frappe.ValidationError, "close registrations"):
+			self.public.save()
+
+	def test_unpublishing_a_ticket_type_is_allowed_while_another_is_published(self):
+		EventTicketTypeFactory.create(event=self.event)
 		self.public.is_published = 0
 		self.public.save()
 

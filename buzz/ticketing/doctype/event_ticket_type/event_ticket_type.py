@@ -116,12 +116,24 @@ class EventTicketType(Document):
 		self.validate_free_or_paid_everywhere()
 		self.validate_locked_prices()
 		self.validate_category_event()
+		self.validate_active_ticket_type_remains()
 		self.validate_public_ticket_type_remains()
 
 	def validate_category_event(self):
 		filters = {"name": self.category, "event": self.event}
 		if self.category and not frappe.db.exists("Event Ticket Category", filters):
 			frappe.throw(_("The ticket category of {0} belongs to another event").format(self.title))
+
+	def validate_active_ticket_type_remains(self):
+		if self.is_new() or self.is_published or not self.has_value_changed("is_published"):
+			return
+		filters = {"event": self.event, "is_published": 1, "name": ["!=", cstr(self.name)]}
+		if not frappe.db.exists("Event Ticket Type", filters):
+			frappe.throw(
+				_(
+					"At least one active ticket type is required. To stop taking registrations, close registrations for the event instead."
+				)
+			)
 
 	def validate_public_ticket_type_remains(self):
 		"""Hidden tickets are only reachable through the event page's public tickets."""
