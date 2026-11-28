@@ -68,7 +68,7 @@ const freeEventAlert = computed(() => {
 			variant: "outline" as const,
 			theme: "gray" as const,
 			onClick: () => {
-				router.push({ name: "event-registrations", params: { eventId: props.event } })
+				router.push({ name: "event-tickets", params: { eventId: props.event } })
 			},
 		},
 	}

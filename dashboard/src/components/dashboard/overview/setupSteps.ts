@@ -89,7 +89,7 @@ const PAGES: Record<StepKey, string> = {
 	location: "event-details",
 	link: "event-details",
 	page: "event-details",
-	tickets: "event-registrations",
+	tickets: "event-tickets",
 	payments: "event-payments",
 	questions: "event-settings",
 	team: "event-settings",

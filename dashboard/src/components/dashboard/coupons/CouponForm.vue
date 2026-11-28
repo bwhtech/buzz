@@ -242,7 +242,7 @@ const hasInvalidCode = computed(
 					<Button
 						label="Go to ticket types"
 						icon-right="lucide-arrow-right"
-						:route="{ name: 'event-registrations', params: { eventId } }"
+						:route="{ name: 'event-tickets', params: { eventId } }"
 					/>
 				</EmptyState>
 				<TicketTypePicker

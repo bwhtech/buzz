@@ -60,8 +60,8 @@ class PlaygroundChecklist:
 			self.step(
 				"add_ticket_type",
 				_("Add a ticket type"),
-				_("Open Registrations and add a ticket type beside the default one."),
-				f"{manage}/registrations",
+				_("Open Tickets and add a ticket type beside the default one."),
+				f"{manage}/tickets",
 				# The event comes with a default ticket type.
 				event and frappe.db.count("Event Ticket Type", {"event": event}) > 1,
 				target="Add ticket type",
@@ -69,8 +69,8 @@ class PlaygroundChecklist:
 			self.step(
 				"add_ticket_category",
 				_("Group tickets into a category"),
-				_("In Registrations, add a category and move a ticket type into it."),
-				f"{manage}/registrations",
+				_("In Tickets, add a category and move a ticket type into it."),
+				f"{manage}/tickets",
 				event and self.exists("Event Ticket Category", event=event),
 				optional=True,
 				target="New Category",
@@ -78,8 +78,8 @@ class PlaygroundChecklist:
 			self.step(
 				"open_registrations",
 				_("Open registrations"),
-				_("New events start closed. Open registrations from the Registrations tab."),
-				f"{manage}/registrations",
+				_("New events start closed. Open registrations from the Tickets page."),
+				f"{manage}/tickets",
 				doc and not are_registrations_closed(doc),
 				target="Registration Closed",
 			),

@@ -77,7 +77,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 </script>
 
 <template>
-	<EventPageHeader :title="page.data?.title" section="Registration" />
+	<EventPageHeader :title="page.data?.title" section="Tickets" />
 
 	<PageWithSidebar>
 		<EventArchivedAlert :event="eventId" />

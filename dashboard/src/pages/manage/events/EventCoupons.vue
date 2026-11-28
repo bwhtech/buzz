@@ -155,7 +155,7 @@ const message = (error: unknown) => (error as FrappeError | null)?.message
 							variant="subtle"
 							icon-right="lucide-arrow-right"
 							label="Add a paid ticket type"
-							:route="{ name: 'event-registrations', params: { eventId } }"
+							:route="{ name: 'event-tickets', params: { eventId } }"
 						/>
 						<Button
 							v-if="availability.hasHidden"
