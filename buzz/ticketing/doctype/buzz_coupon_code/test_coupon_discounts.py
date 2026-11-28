@@ -25,6 +25,24 @@ class TestCouponDiscounts(CouponTestCase):
 
 		self.assert_amounts(self.create_booking_with_add_on(coupon), net=700, discount=250, total=450)
 
+	def test_percentage_discount_capped_at_maximum(self):
+		cap = [{"currency": "INR", "price": 150}]
+		coupon = self.create_coupon(discount_percentage=50, maximum_discount_amounts=cap).name
+
+		self.assert_amounts(self.create_booking(coupon, count=2), net=1000, discount=150, total=850)
+
+	def test_maximum_above_percentage_discount_changes_nothing(self):
+		cap = [{"currency": "INR", "price": 900}]
+		coupon = self.create_coupon(discount_percentage=50, maximum_discount_amounts=cap).name
+
+		self.assert_amounts(self.create_booking(coupon, count=2), net=1000, discount=500, total=500)
+
+	def test_maximum_in_another_currency_leaves_discount_uncapped(self):
+		cap = [{"currency": "USD", "price": 1}]
+		coupon = self.create_coupon(discount_percentage=50, maximum_discount_amounts=cap).name
+
+		self.assert_amounts(self.create_booking(coupon, count=2), net=1000, discount=500, total=500)
+
 	def test_flat_discount_without_currency_row_is_refused(self):
 		coupon = self.create_coupon("flat", discount_amounts=[{"currency": "USD", "price": 10}]).name
 

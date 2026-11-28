@@ -29,6 +29,7 @@ function coupon(overrides: Partial<CouponItem> = {}): CouponItem {
 		discount_type: "Percentage",
 		discount_percentage: 20,
 		discount_amounts: [],
+		maximum_discount_amounts: [],
 		applies_to_all_ticket_types: true,
 		ticket_types: [],
 		minimum_requirement: "None",

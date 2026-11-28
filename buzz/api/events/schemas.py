@@ -342,6 +342,7 @@ class CouponItem(APIResponse):
 	discount_type: Literal["Percentage", "Flat Amount", "None"]
 	discount_percentage: float
 	discount_amounts: list[CurrencyPrice]
+	maximum_discount_amounts: list[CurrencyPrice]
 	applies_to_all_ticket_types: bool
 	ticket_types: list[str]
 	minimum_requirement: Literal["None", "Minimum Order Amount", "Minimum Ticket Count"]
