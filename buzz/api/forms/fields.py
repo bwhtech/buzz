@@ -110,7 +110,7 @@ def get_link_field_options(doctype: str, event: str | None = None) -> list[dict]
 	if meta.has_field("enabled"):
 		filters["enabled"] = 1
 	# Without permissions no query hook runs, so an unpublished row would otherwise be offered.
-	if not can_read and meta.has_field("is_published"):
+	if (not can_read or doctype == "Event Ticket Type") and meta.has_field("is_published"):
 		filters["is_published"] = 1
 	if not can_read and meta.has_field("is_hidden"):
 		filters["is_hidden"] = 0

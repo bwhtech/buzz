@@ -7,7 +7,12 @@ from buzz.api.forms.fields import (
 	get_form_fields,
 	get_link_field_options,
 )
-from buzz.tests.factories import EventCategoryFactory, EventHostFactory, SponsorshipTierFactory
+from buzz.tests.factories import (
+	EventCategoryFactory,
+	EventHostFactory,
+	EventTicketTypeFactory,
+	SponsorshipTierFactory,
+)
 
 # Leaves title and speakers (both mandatory), description and phone renderable.
 TALK_PROPOSAL_EXCLUDE = STANDARD_EXCLUDE_FIELDS | {"event", "submitted_by"}
@@ -82,6 +87,15 @@ class TestGetLinkFieldOptions(IntegrationTestCase):
 		with self.assertQueryCount(0):
 			second = get_link_field_options("Country", event="some-event")
 		self.assertEqual(first, second)
+
+	def test_unpublished_ticket_type_is_not_offered(self):
+		published = EventTicketTypeFactory.create()
+		unpublished = EventTicketTypeFactory.create(event=published.event, is_published=0)
+
+		values = {o["value"] for o in get_link_field_options("Event Ticket Type", event=published.event)}
+
+		self.assertIn(published.name, values)
+		self.assertNotIn(unpublished.name, values)
 
 	def label_of(self, doctype: str, name: str) -> str:
 		return next(o["label"] for o in get_link_field_options(doctype) if o["value"] == name)
