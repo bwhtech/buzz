@@ -21,7 +21,7 @@ test("an event offers its own sections, scoped to its id", () => {
 	assert.deepEqual(labels(items), [
 		"Overview",
 		"Details",
-		"Registration",
+		"Tickets",
 		"Payments",
 		"Transactions",
 		"Coupons",
@@ -152,7 +152,7 @@ test("transactions sit after payments once the user may view them", () => {
 	assert.deepEqual(labels(items), [
 		"Overview",
 		"Details",
-		"Registration",
+		"Tickets",
 		"Payments",
 		"Transactions",
 		"Coupons",
@@ -161,5 +161,5 @@ test("transactions sit after payments once the user may view them", () => {
 	])
 	const transactions = items.find((item) => item.label === "Transactions")
 	assert.equal(transactions?.to, "/manage/events/EV-1/transactions")
-	assert.equal(transactions?.group, "Ticketing")
+	assert.equal(transactions?.group, "Registration")
 })

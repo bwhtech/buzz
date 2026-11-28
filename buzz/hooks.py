@@ -92,6 +92,12 @@ website_redirects = [
 		"target": r"/b/manage/events",
 		"forward_query_parameters": True,
 	},
+	# The event's Registrations page was renamed to Tickets.
+	{
+		"source": r"/b/manage/events/([^/]+)/registrations",
+		"target": r"/b/manage/events/\1/tickets",
+		"forward_query_parameters": True,
+	},
 ]
 
 # Scheduled Tasks

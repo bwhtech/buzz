@@ -70,7 +70,7 @@ test.describe("Event workspace", () => {
 	})
 
 	test("swaps the sidebar for the event's own destinations", async ({ page }) => {
-		for (const label of ["Details", "Registration", "Guests", "Talks"]) {
+		for (const label of ["Details", "Tickets", "Guests", "Talks"]) {
 			await expect(page.getByRole("link", { name: label, exact: true })).toBeVisible({
 				timeout: 15000,
 			})
@@ -291,9 +291,9 @@ test.describe("Guest list", () => {
 	})
 
 	test("keeps the registration state beside the tickets", async ({ page }) => {
-		await page.getByRole("link", { name: "Registration", exact: true }).click()
+		await page.getByRole("link", { name: "Tickets", exact: true }).click()
 
-		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/registrations$`))
+		await expect(page).toHaveURL(new RegExp(`/b/manage/events/${eventId}/tickets$`))
 		// The registration state is the actions rail's own control, which reads the state
 		// out and is how it gets changed.
 		await expect(page.getByRole("button", { name: /Registration (Open|Closed)/ })).toBeVisible({

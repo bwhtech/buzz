@@ -68,8 +68,8 @@ export interface DoctypeField {
 export const FORM_SECTIONS: Record<string, { label: string; route: string }> = {
 	"Talk Proposal": { label: "Talks", route: "event-talks" },
 	"Sponsorship Enquiry": { label: "Sponsorships", route: "event-sponsorships" },
-	"Event Booking": { label: "Registrations", route: "event-registrations" },
-	"Event Booking Attendee": { label: "Registrations", route: "event-registrations" },
+	"Event Booking": { label: "Tickets", route: "event-tickets" },
+	"Event Booking Attendee": { label: "Tickets", route: "event-tickets" },
 }
 
 // What the builder edits; everything else on the doc is the server's to set.

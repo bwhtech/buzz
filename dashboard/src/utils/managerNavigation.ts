@@ -78,32 +78,32 @@ function eventItems(
 		// View opens the details page with its fields locked.
 		{ label: "Details", icon: "lucide-receipt-text", to: `${event}/details`, section: "details" },
 		{
-			label: "Registration",
+			label: "Tickets",
 			icon: "lucide-ticket",
-			to: `${event}/registrations`,
+			to: `${event}/tickets`,
 			section: "ticketing",
-			group: "Ticketing",
+			group: "Registration",
 		},
 		{
 			label: "Payments",
 			icon: "lucide-credit-card",
 			to: `${event}/payments`,
 			section: "ticketing",
-			group: "Ticketing",
+			group: "Registration",
 		},
 		{
 			label: "Transactions",
 			icon: "lucide-arrow-left-right",
 			to: `${event}/transactions`,
 			section: "transactions",
-			group: "Ticketing",
+			group: "Registration",
 		},
 		{
 			label: "Coupons",
 			icon: "lucide-ticket-percent",
 			to: `${event}/coupons`,
 			section: "ticketing",
-			group: "Ticketing",
+			group: "Registration",
 		},
 		{
 			label: "Guests",
