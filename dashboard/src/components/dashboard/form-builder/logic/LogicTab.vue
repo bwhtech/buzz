@@ -112,13 +112,13 @@ function remove(index: number) {
 					<p class="text-p-base font-medium text-ink-gray-8">Logic needs a question you add</p>
 					<p class="max-w-[340px] text-p-sm text-ink-gray-5">
 						This form only has standard fields, and those are always asked, so no rule can change
-						them. Add a question in Build to show, hide or require it based on answers.
+						them. Add a question in Questions to show, hide or require it based on answers.
 					</p>
 					<Button
 						class="mt-2"
 						variant="subtle"
 						icon-left="lucide-layout-list"
-						label="Go to Build"
+						label="Go to Questions"
 						@click="$emit('openBuild')"
 					/>
 				</template>

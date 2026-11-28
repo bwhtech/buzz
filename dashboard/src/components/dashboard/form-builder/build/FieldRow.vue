@@ -105,6 +105,14 @@ function onFocusIn(event: FocusEvent) {
 	select()
 }
 
+// A click on the label or a control keeps editing in place; anywhere else on the row opens settings.
+function onClick(event: MouseEvent) {
+	const target = event.target as HTMLElement
+	const isEditable = target.isContentEditable || target.closest("input, textarea, button, a")
+	if (isEditable) select()
+	else openSettings()
+}
+
 function openSettings() {
 	select()
 	props.editor.settingsOpen.value = true
@@ -206,8 +214,7 @@ function onKeydown(event: KeyboardEvent) {
 		@focusin="onFocusIn"
 		@focusout="editing = false"
 		@keydown="onKeydown"
-		@click.stop="select"
-		@dblclick="openSettings"
+		@click.stop="onClick"
 		@dragstart="emit('dragstart', $event)"
 	>
 		<div
@@ -219,7 +226,6 @@ function onKeydown(event: KeyboardEvent) {
 					: 'pointer-events-none opacity-0 group-focus-within:pointer-events-auto group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:pointer-events-auto [@media(hover:hover)]:group-hover:opacity-100'
 			"
 			@click.stop
-			@dblclick.stop
 		>
 			<span class="grid h-7 w-5 cursor-grab place-items-center text-ink-gray-4" aria-hidden="true">
 				<span class="lucide-grip-vertical size-3.5" />
@@ -252,7 +258,7 @@ function onKeydown(event: KeyboardEvent) {
 					@click="question.mandatory = question.mandatory ? 0 : 1"
 				/>
 			</Tooltip>
-			<Tooltip text="Field settings · ⌘↵ or double-click">
+			<Tooltip text="Field settings · ⌘↵ or click the field">
 				<Button
 					variant="ghost"
 					size="sm"
