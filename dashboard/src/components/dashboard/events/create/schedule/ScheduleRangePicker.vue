@@ -16,7 +16,7 @@ const open = ref(false)
 const month = ref(props.schedule.startDate || today())
 const range = useScheduleRange(props.schedule)
 const { phase, awaitingEnd, sameDay, shownEnd, hovered, startTime, endTime } = range
-const { endDateLabel, lengthLabel, summaryLine } = scheduleLabels(props.schedule)
+const { endDateLabel, lengthLabel, summaryLines } = scheduleLabels(props.schedule)
 const picks = quickDates()
 
 watch(open, (isOpen) => {
@@ -40,11 +40,8 @@ const isPicked = (start: string, end: string) =>
 				:disabled="disabled"
 			>
 				<span class="lucide-calendar size-[18px] shrink-0 text-ink-gray-6" aria-hidden="true" />
-				<span
-					id="event-schedule-end"
-					class="min-w-0 flex-1 truncate text-base font-medium text-ink-gray-9"
-				>
-					{{ summaryLine }}
+				<span id="event-schedule-end" class="min-w-0 flex-1 text-base font-medium text-ink-gray-9">
+					<span v-for="line in summaryLines" :key="line" class="block truncate">{{ line }}</span>
 				</span>
 				<span class="shrink-0 text-xs text-ink-gray-5">{{ lengthLabel }}</span>
 			</button>

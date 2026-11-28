@@ -2,6 +2,9 @@
 import { Skeleton } from "frappe-ui"
 import { computed, ref, watch } from "vue"
 
+import LocationsMap from "@/components/dashboard/events/location/LocationsMap.vue"
+import type { Venue } from "@/data/venues"
+
 // The class lands on the map, not on whatever the fallback slot renders.
 defineOptions({ inheritAttrs: false })
 
@@ -13,11 +16,19 @@ const props = defineProps<{
 	embedUrl?: string | null
 }>()
 
-const OPEN_STREET_MAP_SPAN_DEGREES = 0.01
+const PREVIEW_PADDING = { top: 24, right: 24, bottom: 24, left: 24 }
 
 const isLoaded = ref(false)
 // The skeleton stays until the map has finished fading in over it.
 const isRevealed = ref(false)
+
+// A place with coordinates is drawn on the location picker's map, in the same theme.
+const place = computed<Venue | null>(() => {
+	const { latitude, longitude, title } = props
+	if (!latitude || !longitude) return null
+	return { name: title, venue_name: title, address: null, latitude, longitude }
+})
+const places = computed(() => (place.value ? [place.value] : []))
 
 const googleUrl = computed(() => {
 	const key = window.google_maps_embed_api_key
@@ -26,20 +37,7 @@ const googleUrl = computed(() => {
 	return `https://www.google.com/maps/embed/v1/place?${search}`
 })
 
-// Same box and marker as the event page draws for a venue with coordinates.
-const openStreetMapUrl = computed(() => {
-	const { latitude, longitude } = props
-	if (!latitude || !longitude) return ""
-	const span = OPEN_STREET_MAP_SPAN_DEGREES
-	const search = new URLSearchParams({
-		bbox: [longitude - span, latitude - span, longitude + span, latitude + span].join(","),
-		layer: "mapnik",
-		marker: `${latitude},${longitude}`,
-	})
-	return `https://www.openstreetmap.org/export/embed.html?${search}`
-})
-
-const url = computed(() => googleUrl.value || props.embedUrl || openStreetMapUrl.value)
+const url = computed(() => googleUrl.value || props.embedUrl)
 
 watch(url, () => {
 	isLoaded.value = false
@@ -48,7 +46,20 @@ watch(url, () => {
 </script>
 
 <template>
-	<div v-if="url" v-bind="$attrs" class="relative overflow-hidden">
+	<div v-if="place" v-bind="$attrs" class="relative overflow-hidden">
+		<!-- Keyed by coordinates: a new place mounts a new map framed on it. -->
+		<LocationsMap
+			:key="`${place.latitude},${place.longitude}`"
+			class="absolute inset-0"
+			:places="places"
+			:selected="[]"
+			:active="place.name"
+			:hovered="null"
+			:padding="PREVIEW_PADDING"
+			readonly
+		/>
+	</div>
+	<div v-else-if="url" v-bind="$attrs" class="relative overflow-hidden">
 		<Skeleton v-if="!isRevealed" class="absolute inset-0 rounded-none" />
 		<!-- Keyed by place: a new place mounts a new iframe, because changing `src` on a live
 		 one adds a browser history entry. -->

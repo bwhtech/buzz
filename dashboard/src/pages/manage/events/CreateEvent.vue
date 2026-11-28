@@ -91,12 +91,12 @@ const CREATION_STEPS = [
 	"Booking the venue",
 	"Opening the guest list",
 ]
-// The page that sent us here, such as a community calendar, gets the organiser back.
+// The page that sent us here, such as a community calendar, gets the organiser back on cancel.
 const redirectTo = computed(() => {
 	const target = route.query["redirect-to"]
 	return typeof target === "string" ? target : ""
 })
-const finalStep = computed(() => (redirectTo.value ? "Taking you back" : "Opening event page"))
+const finalStep = "Opening event page"
 const FAILED_STEP = "Failed to create event"
 const STEP_DURATION = 600
 
@@ -174,6 +174,8 @@ async function save() {
 
 	submitting.value = true
 	failed.value = false
+	// The Overview's code downloads while the steps play, so landing on it doesn't wait.
+	void import("@/pages/manage/events/EventOverview.vue")
 	// Steps and save run together: whichever finishes first waits for the other. Settled,
 	// not all: the panel reads the recorded error, whether or not the save also rejects.
 	await Promise.allSettled([
@@ -202,13 +204,12 @@ async function save() {
 		return
 	}
 
-	step.value = finalStep.value
+	step.value = finalStep
 	toast.success(`${createEvent.data?.title} created`)
 	await wait(STEP_DURATION)
 	// Someone who walked off mid-save meant it; the toast already says the event exists.
 	if (router.currentRoute.value.name !== "create-event") return
-	if (redirectTo.value) return goBack(redirectTo.value)
-	router.push({ name: "event-details", params: { eventId: createEvent.data?.name } })
+	router.push({ name: "event-overview", params: { eventId: createEvent.data?.name } })
 }
 
 function close() {
